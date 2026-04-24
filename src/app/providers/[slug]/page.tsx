@@ -94,7 +94,7 @@ export default async function ProviderDetailPage({ params }: { params: { slug: s
               href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.slug)}`}
               className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-teal-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-600"
             >
-              Request Service
+              Book this professional
             </Link>
           </div>
         </div>
@@ -209,7 +209,7 @@ export default async function ProviderDetailPage({ params }: { params: { slug: s
             href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.slug)}`}
             className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-teal-600 px-2 text-xs font-semibold text-white"
           >
-            Request
+            Book
           </Link>
         </div>
       </div>
