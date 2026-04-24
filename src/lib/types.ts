@@ -18,7 +18,7 @@ export type Provider = {
   verified: boolean;
   rating: number;
   completedJobs: number;
-  priceGuide: string;
+  priceGuide?: string;
   phone: string;
   whatsapp: string;
   availability: string;
