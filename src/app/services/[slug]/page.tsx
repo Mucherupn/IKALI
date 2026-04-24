@@ -3,7 +3,15 @@ import { notFound } from 'next/navigation';
 import { ProviderDirectory } from '@/components/provider-directory';
 import { getProvidersByServiceSlug, getServiceBySlug, getServiceCategories } from '@/lib/data';
 
-export default async function ServiceDetailsPage({ params }: { params: { slug: string } }) {
+type ServiceDetailsPageProps = {
+  params: { slug: string };
+  searchParams?: {
+    location?: string;
+    q?: string;
+  };
+};
+
+export default async function ServiceDetailsPage({ params, searchParams }: ServiceDetailsPageProps) {
   const [service, serviceProviders, services] = await Promise.all([
     getServiceBySlug(params.slug),
     getProvidersByServiceSlug(params.slug),
@@ -40,7 +48,10 @@ export default async function ServiceDetailsPage({ params }: { params: { slug: s
         providers={serviceProviders}
         serviceNamesBySlug={serviceNamesBySlug}
         withSearch
-        searchPlaceholder={`Search ${service.name.toLowerCase()} providers by name or area`}
+        searchPlaceholder={`Search ${service.name.toLowerCase()} providers by name, area, or bio`}
+        initialQuery={searchParams?.q ?? ''}
+        initialLocation={searchParams?.location ?? ''}
+        showSuggestions
       />
     </div>
   );

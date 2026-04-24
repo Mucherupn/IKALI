@@ -1,7 +1,14 @@
 import { ProviderDirectory } from '@/components/provider-directory';
 import { getProviders, getServiceCategories } from '@/lib/data';
 
-export default async function ProvidersPage() {
+type ProvidersPageProps = {
+  searchParams?: {
+    q?: string;
+    location?: string;
+  };
+};
+
+export default async function ProvidersPage({ searchParams }: ProvidersPageProps) {
   const [providers, services] = await Promise.all([getProviders(), getServiceCategories()]);
   const serviceNamesBySlug = Object.fromEntries(services.map((service) => [service.slug, service.name]));
 
@@ -18,7 +25,10 @@ export default async function ProvidersPage() {
         providers={providers}
         serviceNamesBySlug={serviceNamesBySlug}
         withSearch
-        searchPlaceholder="Search providers by name, service, or location"
+        searchPlaceholder="Search providers by name, service, location, or bio"
+        initialQuery={searchParams?.q ?? ''}
+        initialLocation={searchParams?.location ?? ''}
+        showSuggestions
       />
     </div>
   );
