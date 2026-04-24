@@ -12,7 +12,8 @@ type JobRequestRow = Database['public']['Tables']['job_requests']['Row'];
 type ProviderServiceRow = Database['public']['Tables']['provider_services']['Row'];
 
 type AdminTab = 'providers' | 'categories' | 'requests';
-type RequestStatus = 'new' | 'contacted' | 'assigned' | 'completed' | 'cancelled';
+type BookingDisplayStatus = 'requested' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
+type StoredRequestStatus = BookingDisplayStatus | 'new' | 'contacted' | 'assigned' | 'pending';
 
 type ProviderFormState = {
   id?: string;
@@ -47,10 +48,16 @@ type CategoryFormState = {
 const TAB_OPTIONS: { id: AdminTab; label: string }[] = [
   { id: 'providers', label: 'Providers' },
   { id: 'categories', label: 'Service Categories' },
-  { id: 'requests', label: 'Job Requests' }
+  { id: 'requests', label: 'Booking Requests' }
 ];
 
-const REQUEST_STATUSES: RequestStatus[] = ['new', 'contacted', 'assigned', 'completed', 'cancelled'];
+const BOOKING_STATUS_OPTIONS: { value: BookingDisplayStatus; label: string }[] = [
+  { value: 'requested', label: 'Requested' },
+  { value: 'accepted', label: 'Accepted' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' }
+];
 
 const providerInitialState: ProviderFormState = {
   full_name: '',
@@ -88,8 +95,23 @@ function slugify(value: string) {
     .replace(/(^-|-$)+/g, '');
 }
 
-function normalizeRequestStatus(value: string): string {
-  return value === 'pending' ? 'new' : value;
+function toDisplayStatus(value: string): BookingDisplayStatus {
+  if (value === 'pending' || value === 'new' || value === 'requested') return 'requested';
+  if (value === 'contacted' || value === 'accepted') return 'accepted';
+  if (value === 'assigned' || value === 'in_progress') return 'in_progress';
+  if (value === 'cancelled') return 'cancelled';
+  return 'completed';
+}
+
+function toStoredStatus(value: BookingDisplayStatus, currentStatus: string): StoredRequestStatus {
+  const current = currentStatus as StoredRequestStatus;
+  const prefersLegacy = current === 'new' || current === 'contacted' || current === 'assigned' || current === 'pending';
+  if (!prefersLegacy) return value;
+
+  if (value === 'requested') return 'new';
+  if (value === 'accepted') return 'contacted';
+  if (value === 'in_progress') return 'assigned';
+  return value;
 }
 
 export function ControlAdminDashboard() {
@@ -157,8 +179,8 @@ export function ControlAdminDashboard() {
     const verifiedProviders = providers.filter((provider) => provider.is_verified).length;
     const activeServices = serviceCategories.filter((category) => category.is_active).length;
     const newRequests = jobRequests.filter((request) => {
-      const status = normalizeRequestStatus(request.status);
-      return status === 'new';
+      const status = toDisplayStatus(request.status);
+      return status === 'requested';
     }).length;
     const completedRequests = jobRequests.filter((request) => request.status === 'completed').length;
 
@@ -166,8 +188,8 @@ export function ControlAdminDashboard() {
       { label: 'Total providers', value: providers.length },
       { label: 'Verified providers', value: verifiedProviders },
       { label: 'Active services', value: activeServices },
-      { label: 'New job requests', value: newRequests },
-      { label: 'Completed job requests', value: completedRequests }
+      { label: 'Requested bookings', value: newRequests },
+      { label: 'Completed bookings', value: completedRequests }
     ];
   }, [providers, serviceCategories, jobRequests]);
 
@@ -367,12 +389,15 @@ export function ControlAdminDashboard() {
     }
   }
 
-  async function updateRequestStatus(requestId: string, status: RequestStatus) {
+  async function updateRequestStatus(requestId: string, status: BookingDisplayStatus, currentStatus: string) {
     resetMessages();
     setBusyRequestId(requestId);
     try {
       const supabase = getSupabaseClient();
-      const { error: updateError } = await supabase.from('job_requests').update({ status }).eq('id', requestId);
+      const { error: updateError } = await supabase
+        .from('job_requests')
+        .update({ status: toStoredStatus(status, currentStatus) })
+        .eq('id', requestId);
       if (updateError) throw updateError;
 
       setSuccessMessage('Job request status updated.');
@@ -782,11 +807,10 @@ export function ControlAdminDashboard() {
                   <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
                     <tr>
                       <th className="px-3 py-3">Customer</th>
-                      <th className="px-3 py-3">Service</th>
-                      <th className="px-3 py-3">When</th>
+                      <th className="px-3 py-3">Booking details</th>
+                      <th className="px-3 py-3">Requested for</th>
                       <th className="px-3 py-3">Location</th>
                       <th className="px-3 py-3">Urgency</th>
-                      <th className="px-3 py-3">Provider</th>
                       <th className="px-3 py-3">Status</th>
                     </tr>
                   </thead>
@@ -796,27 +820,31 @@ export function ControlAdminDashboard() {
                         <td className="px-3 py-3">
                           <p className="font-semibold text-slate-900">{request.customer_name}</p>
                           <p className="text-xs text-slate-600">{request.customer_phone}</p>
-                          {request.description && <p className="mt-1 max-w-xs text-xs text-slate-500">{request.description}</p>}
+                          <p className="mt-1 text-xs text-slate-500">
+                            Created {new Date(request.created_at).toLocaleDateString()}
+                          </p>
                         </td>
-                        <td className="px-3 py-3">{categoryNameById.get(request.service_category_id) ?? 'Unknown service'}</td>
                         <td className="px-3 py-3 text-xs text-slate-600">
-                          {request.preferred_date ?? 'No date'}
-                          <br />
-                          {request.preferred_time ?? 'No time'}
+                          <p className="font-medium text-slate-800">{categoryNameById.get(request.service_category_id) ?? 'Unknown service'}</p>
+                          <p>{request.description?.trim() || 'No description provided'}</p>
+                        </td>
+                        <td className="px-3 py-3 text-xs text-slate-600">
+                          <p>{request.preferred_date ?? 'No date selected'}</p>
+                          <p>{request.preferred_time ?? 'No time selected'}</p>
+                          <p className="mt-1">{request.provider_id ? providerNameById.get(request.provider_id) ?? 'Unknown provider' : 'No preferred provider'}</p>
                         </td>
                         <td className="px-3 py-3">{request.location}</td>
                         <td className="px-3 py-3">{request.urgency ?? 'standard'}</td>
-                        <td className="px-3 py-3">{request.provider_id ? providerNameById.get(request.provider_id) ?? 'Unknown provider' : 'Unassigned'}</td>
                         <td className="px-3 py-3">
                           <select
-                            value={normalizeRequestStatus(request.status)}
-                            onChange={(event) => updateRequestStatus(request.id, event.target.value as RequestStatus)}
+                            value={toDisplayStatus(request.status)}
+                            onChange={(event) => updateRequestStatus(request.id, event.target.value as BookingDisplayStatus, request.status)}
                             disabled={busyRequestId === request.id}
                             className="focus-ring min-h-10 rounded-lg border border-slate-300 px-2"
                           >
-                            {REQUEST_STATUSES.map((status) => (
-                              <option key={status} value={status}>
-                                {status}
+                            {BOOKING_STATUS_OPTIONS.map((status) => (
+                              <option key={status.value} value={status.value}>
+                                {status.label}
                               </option>
                             ))}
                           </select>
@@ -832,20 +860,23 @@ export function ControlAdminDashboard() {
                   <article key={request.id} className="rounded-lg border border-slate-200 p-3 text-sm">
                     <p className="font-semibold text-slate-900">{request.customer_name}</p>
                     <p className="text-xs text-slate-600">{request.customer_phone}</p>
-                    <p className="mt-2 text-xs text-slate-600">{categoryNameById.get(request.service_category_id) ?? 'Unknown service'}</p>
-                    <p className="mt-1 text-xs text-slate-600">{request.location}</p>
-                    <p className="mt-1 text-xs text-slate-600">{request.urgency ?? 'standard'}</p>
-                    {request.description && <p className="mt-2 text-xs text-slate-500">{request.description}</p>}
+                    <p className="mt-1 text-xs text-slate-500">Created {new Date(request.created_at).toLocaleDateString()}</p>
+                    <p className="mt-2 text-xs text-slate-600">Service: {categoryNameById.get(request.service_category_id) ?? 'Unknown service'}</p>
+                    <p className="mt-1 text-xs text-slate-600">Provider: {request.provider_id ? providerNameById.get(request.provider_id) ?? 'Unknown provider' : 'No preferred provider'}</p>
+                    <p className="mt-1 text-xs text-slate-600">Date/time: {request.preferred_date ?? 'No date'} · {request.preferred_time ?? 'No time'}</p>
+                    <p className="mt-1 text-xs text-slate-600">Location: {request.location}</p>
+                    <p className="mt-1 text-xs text-slate-600">Urgency: {request.urgency ?? 'standard'}</p>
+                    <p className="mt-2 text-xs text-slate-500">{request.description?.trim() || 'No description provided'}</p>
                     <div className="mt-3">
                       <select
-                        value={normalizeRequestStatus(request.status)}
-                        onChange={(event) => updateRequestStatus(request.id, event.target.value as RequestStatus)}
+                        value={toDisplayStatus(request.status)}
+                        onChange={(event) => updateRequestStatus(request.id, event.target.value as BookingDisplayStatus, request.status)}
                         disabled={busyRequestId === request.id}
                         className="focus-ring min-h-10 w-full rounded-lg border border-slate-300 px-2"
                       >
-                        {REQUEST_STATUSES.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
+                        {BOOKING_STATUS_OPTIONS.map((status) => (
+                          <option key={status.value} value={status.value}>
+                            {status.label}
                           </option>
                         ))}
                       </select>

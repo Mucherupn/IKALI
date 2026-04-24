@@ -18,6 +18,8 @@ type RequestFormData = {
   providerReference: string;
 };
 
+const BOOKING_STATUS = 'requested';
+
 type ServiceOption = Pick<Database['public']['Tables']['service_categories']['Row'], 'id' | 'name' | 'slug'>;
 type ProviderOption = Pick<Database['public']['Tables']['providers']['Row'], 'id' | 'full_name' | 'slug'>;
 
@@ -127,7 +129,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
         preferred_time: formData.preferredTime || null,
         description: formData.jobDescription.trim() || null,
         urgency: formData.urgency,
-        status: 'pending',
+        status: BOOKING_STATUS,
         created_at: new Date().toISOString()
       };
 
@@ -154,8 +156,9 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
           </p>
           <h2 className="mt-4 text-2xl font-bold text-slate-900">Request sent successfully</h2>
           <p className="mt-3 text-slate-600">
-            Your request has been received. An I Kali professional will contact you shortly.
+            Your booking request has been received. An I Kali professional will contact you shortly to confirm availability.
           </p>
+          <p className="mt-2 text-sm text-slate-600">We will review your request and connect you with the right professional.</p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Link href="/" className="focus-ring rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-800">
               Back to Home
@@ -314,6 +317,25 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
       </fieldset>
 
       <div>
+        <label htmlFor="providerReference" className="mb-2 block text-sm font-semibold text-slate-700">
+          Requested professional (optional)
+        </label>
+        <select
+          id="providerReference"
+          value={formData.providerReference}
+          onChange={(event) => setFormData((current) => ({ ...current, providerReference: event.target.value }))}
+          className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
+        >
+          <option value="">No specific professional</option>
+          {providers.map((provider) => (
+            <option key={provider.id} value={provider.slug}>
+              {provider.full_name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
         <p className="mb-2 text-sm font-semibold text-slate-700">Add photos (optional)</p>
         <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
           Image upload coming soon. You can still submit your request now.
@@ -339,7 +361,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
           disabled={isSubmitting}
           className="focus-ring inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-teal-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isSubmitting ? 'Submitting request...' : `Request ${selectedServiceName}`}
+          {isSubmitting ? 'Submitting booking request...' : `Request a booking for ${selectedServiceName}`}
         </button>
       </div>
     </form>

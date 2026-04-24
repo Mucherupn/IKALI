@@ -39,7 +39,7 @@ export default async function ServiceDetailsPage({ params, searchParams }: Servi
             href={`/request?service=${service.slug}`}
             className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-800"
           >
-            Request {service.name}
+            Request this service
           </Link>
         </div>
       </header>
