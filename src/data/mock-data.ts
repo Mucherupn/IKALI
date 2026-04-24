@@ -1,4 +1,4 @@
-import { Provider, ServiceCategory } from '@/lib/types';
+import { Provider, ProviderReview, ServiceCategory } from '@/lib/types';
 
 export const serviceCategories: ServiceCategory[] = [
   { slug: 'plumbers', name: 'Plumbers', icon: '🛠️', shortDescription: 'Pipe repairs, leaks, and installations.' },
@@ -23,13 +23,18 @@ export const providers: Provider[] = [
     skills: ['Leak fixing', 'Water heater setup', 'Bathroom fixtures'],
     experienceYears: 8,
     verified: true,
+    phoneVerified: true,
+    experienceChecked: true,
+    workHistoryReviewed: true,
     rating: 4.9,
     completedJobs: 214,
+    responseTime: 'Typically within 20 mins',
     priceGuide: 'From KES 2,500',
     phone: '+254712345678',
     whatsapp: '254712345678',
     availability: 'Available today',
-    reviews: 132
+    reviews: 132,
+    reviewCount: 132
   },
   {
     id: '2',
@@ -42,13 +47,18 @@ export const providers: Provider[] = [
     skills: ['Fault diagnosis', 'DB board upgrades', 'Security lighting'],
     experienceYears: 6,
     verified: true,
+    phoneVerified: true,
+    experienceChecked: true,
+    workHistoryReviewed: true,
     rating: 4.8,
     completedJobs: 176,
+    responseTime: 'Typically within 35 mins',
     priceGuide: 'From KES 3,000',
     phone: '+254798765432',
     whatsapp: '254798765432',
     availability: 'Next slot: tomorrow',
-    reviews: 97
+    reviews: 97,
+    reviewCount: 97
   },
   {
     id: '3',
@@ -61,13 +71,18 @@ export const providers: Provider[] = [
     skills: ['Deep cleaning', 'Post-construction cleanup', 'Laundry services'],
     experienceYears: 5,
     verified: true,
+    phoneVerified: false,
+    experienceChecked: true,
+    workHistoryReviewed: true,
     rating: 4.7,
     completedJobs: 321,
+    responseTime: 'Typically within 1 hour',
     priceGuide: 'From KES 2,000',
     phone: '+254701234567',
     whatsapp: '254701234567',
     availability: 'Available this weekend',
-    reviews: 205
+    reviews: 205,
+    reviewCount: 205
   },
   {
     id: '4',
@@ -80,13 +95,18 @@ export const providers: Provider[] = [
     skills: ['Blocked drains', 'Pipe replacement', 'Pump installation'],
     experienceYears: 7,
     verified: false,
+    phoneVerified: false,
+    experienceChecked: true,
+    workHistoryReviewed: false,
     rating: 4.5,
     completedJobs: 142,
+    responseTime: 'Response time being verified',
     priceGuide: 'From KES 2,200',
     phone: '+254722333444',
     whatsapp: '254722333444',
     availability: 'Available tomorrow morning',
-    reviews: 88
+    reviews: 88,
+    reviewCount: 88
   },
   {
     id: '5',
@@ -99,13 +119,18 @@ export const providers: Provider[] = [
     skills: ['Interior paint', 'Exterior coatings', 'Color consultation'],
     experienceYears: 9,
     verified: true,
+    phoneVerified: true,
+    experienceChecked: true,
+    workHistoryReviewed: true,
     rating: 4.9,
     completedJobs: 260,
+    responseTime: 'Typically within 25 mins',
     priceGuide: 'From KES 5,000',
     phone: '+254733444555',
     whatsapp: '254733444555',
     availability: 'Available next week',
-    reviews: 166
+    reviews: 166,
+    reviewCount: 166
   },
   {
     id: '6',
@@ -118,13 +143,61 @@ export const providers: Provider[] = [
     skills: ['Engine diagnostics', 'Battery replacement', 'Oil service'],
     experienceYears: 10,
     verified: true,
+    phoneVerified: true,
+    experienceChecked: true,
+    workHistoryReviewed: true,
     rating: 4.6,
     completedJobs: 303,
+    responseTime: 'Typically within 40 mins',
     priceGuide: 'From KES 3,500',
     phone: '+254744555666',
     whatsapp: '254744555666',
     availability: 'Available today',
-    reviews: 149
+    reviews: 149,
+    reviewCount: 149
+  }
+];
+
+export const providerReviews: ProviderReview[] = [
+  {
+    id: 'r1',
+    providerSlug: 'samuel-otieno-plumber',
+    customerName: 'Mary A.',
+    rating: 5,
+    date: '2026-03-18',
+    comment: 'Fast response, clear communication, and very neat work.'
+  },
+  {
+    id: 'r2',
+    providerSlug: 'samuel-otieno-plumber',
+    customerName: 'James K.',
+    rating: 5,
+    date: '2026-02-04',
+    comment: 'Showed up on time and solved the issue in one visit.'
+  },
+  {
+    id: 'r3',
+    providerSlug: 'samuel-otieno-plumber',
+    customerName: 'Aisha N.',
+    rating: 4,
+    date: '2026-01-22',
+    comment: 'Professional and respectful. Would hire again.'
+  },
+  {
+    id: 'r4',
+    providerSlug: 'grace-wanjiku-electrician',
+    customerName: 'David M.',
+    rating: 5,
+    date: '2026-03-11',
+    comment: 'Handled the rewiring safely and explained every step.'
+  },
+  {
+    id: 'r5',
+    providerSlug: 'grace-wanjiku-electrician',
+    customerName: 'Wanjiru P.',
+    rating: 4,
+    date: '2026-02-02',
+    comment: 'Good quality work. Arrived a little later than planned.'
   }
 ];
 
@@ -140,4 +213,8 @@ export function getServiceNameBySlug(slug: string) {
 
 export function getProviderCountByService(slug: string) {
   return providers.filter((provider) => provider.serviceCategory === slug).length;
+}
+
+export function getMockReviewsForProvider(providerSlug: string): ProviderReview[] {
+  return providerReviews.filter((review) => review.providerSlug === providerSlug);
 }

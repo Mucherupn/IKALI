@@ -6,7 +6,8 @@ const links = [
   { href: '/request', label: 'Request Job' },
   { href: '/become-a-pro', label: 'Become a Pro' },
   { href: '/about', label: 'About' },
-  { href: '/contact', label: 'Contact' }
+  { href: '/contact', label: 'Contact' },
+  { href: '/trust', label: 'Trust & Safety' }
 ];
 
 export function Navbar() {
