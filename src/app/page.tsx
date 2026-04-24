@@ -16,14 +16,14 @@ export default function HomePage() {
           a job in minutes.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/services" className="focus-ring rounded-lg bg-white px-4 py-2 font-semibold text-teal-800">
-            Explore Services
+          <Link href="/request" className="focus-ring rounded-lg bg-white px-4 py-2 font-semibold text-teal-800">
+            Find a Service
           </Link>
           <Link
-            href="/request"
+            href="/services"
             className="focus-ring rounded-lg border border-teal-200 px-4 py-2 font-semibold text-white hover:bg-teal-700"
           >
-            Request a Job
+            Explore Services
           </Link>
         </div>
       </section>
