@@ -63,6 +63,8 @@ export function ProviderDirectory({
     setVerifiedOnly(false);
   };
 
+  const noProvidersAvailable = providers.length === 0;
+
   return (
     <div className="mt-6 space-y-6">
       <section className="card p-4 sm:p-5">
@@ -169,8 +171,14 @@ export function ProviderDirectory({
         </div>
       ) : (
         <section className="card px-6 py-10 text-center">
-          <h3 className="text-lg font-semibold text-slate-900">No matching professionals found yet.</h3>
-          <p className="mt-2 text-sm text-slate-600">Try adjusting your search or request this service and we will source one for you.</p>
+          <h3 className="text-lg font-semibold text-slate-900">
+            {noProvidersAvailable ? 'No providers listed yet.' : 'No matching professionals found yet.'}
+          </h3>
+          <p className="mt-2 text-sm text-slate-600">
+            {noProvidersAvailable
+              ? 'Provider data is currently unavailable. You can still submit a request and our team will follow up.'
+              : 'Try adjusting your search or request this service and we will source one for you.'}
+          </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             <button
               type="button"

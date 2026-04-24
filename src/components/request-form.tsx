@@ -45,6 +45,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [dataWarning, setDataWarning] = useState('');
 
   const [formData, setFormData] = useState<RequestFormData>({
     ...initialFormState,
@@ -79,7 +80,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
           setProviders(providerRows);
         }
       } catch {
-        // Keep mock fallback silently so UI remains usable.
+        setDataWarning('Live data is currently unavailable. You can still submit your request.');
       }
     }
 
@@ -163,13 +164,10 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
             Payment is not required yet. An I Kali representative will confirm the job details before any payment is requested.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/" className="focus-ring rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-800">
+            <Link href="/" className="focus-ring btn btn-primary">
               Back to Home
             </Link>
-            <Link
-              href="/services"
-              className="focus-ring rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-            >
+            <Link href="/services" className="focus-ring btn btn-secondary">
               Browse Services
             </Link>
           </div>
@@ -356,6 +354,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
         I Kali uses your contact details only to connect you with a suitable professional.
       </p>
 
+      {dataWarning ? <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200">{dataWarning}</p> : null}
       {submitError ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{submitError}</p> : null}
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.10)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -18,8 +19,9 @@ const portfolioImages = [
   'https://images.unsplash.com/photo-1593069567131-53a0614dde1d?auto=format&fit=crop&w=900&q=80'
 ];
 
-export default async function ProviderDetailPage({ params }: { params: { slug: string } }) {
-  const provider = await getProviderBySlug(params.slug);
+export default async function ProviderDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const routeParams = await params;
+  const provider = await getProviderBySlug(routeParams.slug);
 
   if (!provider) notFound();
 
@@ -215,4 +217,20 @@ export default async function ProviderDetailPage({ params }: { params: { slug: s
       </div>
     </div>
   );
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const routeParams = await params;
+  const provider = await getProviderBySlug(routeParams.slug);
+  if (!provider) {
+    return {
+      title: 'Provider not found | I Kali',
+      description: 'This provider profile could not be found.'
+    };
+  }
+
+  return {
+    title: `${provider.name} | I Kali Provider`,
+    description: `View ${provider.name}'s service profile, trust indicators, and booking options on I Kali.`
+  };
 }

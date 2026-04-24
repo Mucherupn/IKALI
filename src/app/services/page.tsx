@@ -1,5 +1,11 @@
+import type { Metadata } from 'next';
 import { ServiceCard } from '@/components/service-card';
 import { getProviders, getServiceCategories } from '@/lib/data';
+
+export const metadata: Metadata = {
+  title: 'Services | I Kali',
+  description: 'Browse trusted local service categories in Nairobi and request help in minutes.'
+};
 
 export default async function ServicesPage() {
   const [services, providers] = await Promise.all([getServiceCategories(), getProviders()]);
@@ -18,11 +24,18 @@ export default async function ServicesPage() {
         </p>
       </header>
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {services.map((service) => (
-          <ServiceCard key={service.slug} service={service} providerCount={providerCountsByService[service.slug] ?? 0} />
-        ))}
-      </section>
+      {services.length > 0 ? (
+        <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {services.map((service) => (
+            <ServiceCard key={service.slug} service={service} providerCount={providerCountsByService[service.slug] ?? 0} />
+          ))}
+        </section>
+      ) : (
+        <section className="empty-state mt-8">
+          <h2 className="text-lg font-semibold text-slate-900">No services listed yet</h2>
+          <p className="mt-2 text-sm text-slate-600">Please check back shortly or submit your request directly.</p>
+        </section>
+      )}
     </div>
   );
 }

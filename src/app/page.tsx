@@ -1,8 +1,14 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { ProviderCard } from '@/components/provider-card';
 import { ServiceCard } from '@/components/service-card';
 import { getProviders, getServiceCategories } from '@/lib/data';
 import { GlobalSearch } from '@/components/global-search';
+
+export const metadata: Metadata = {
+  title: 'I Kali | Trusted local services in Nairobi',
+  description: 'Find verified local professionals in Nairobi for home and business services. Compare providers and request help quickly.'
+};
 
 export default async function HomePage() {
   const [services, providers] = await Promise.all([getServiceCategories(), getProviders()]);
