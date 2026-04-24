@@ -1,13 +1,18 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ProviderDirectory } from '@/components/provider-directory';
-import { providers, serviceCategories } from '@/data/mock-data';
+import { getProvidersByServiceSlug, getServiceBySlug, getServiceCategories } from '@/lib/data';
 
-export default function ServiceDetailsPage({ params }: { params: { slug: string } }) {
-  const service = serviceCategories.find((item) => item.slug === params.slug);
+export default async function ServiceDetailsPage({ params }: { params: { slug: string } }) {
+  const [service, serviceProviders, services] = await Promise.all([
+    getServiceBySlug(params.slug),
+    getProvidersByServiceSlug(params.slug),
+    getServiceCategories()
+  ]);
+
   if (!service) notFound();
 
-  const serviceProviders = providers.filter((provider) => provider.serviceCategory === params.slug);
+  const serviceNamesBySlug = Object.fromEntries(services.map((item) => [item.slug, item.name]));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
@@ -33,6 +38,7 @@ export default function ServiceDetailsPage({ params }: { params: { slug: string 
 
       <ProviderDirectory
         providers={serviceProviders}
+        serviceNamesBySlug={serviceNamesBySlug}
         withSearch
         searchPlaceholder={`Search ${service.name.toLowerCase()} providers by name or area`}
       />

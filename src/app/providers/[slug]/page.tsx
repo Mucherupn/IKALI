@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getServiceNameBySlug, providers } from '@/data/mock-data';
+import { getProviderBySlug, getServiceNameBySlug } from '@/lib/data';
 
 const mockReviews = [
   { customer: 'Mary A.', rating: 5, comment: 'Fast response, clear communication, and very neat work.' },
@@ -15,12 +15,12 @@ const portfolioImages = [
   'https://images.unsplash.com/photo-1593069567131-53a0614dde1d?auto=format&fit=crop&w=900&q=80'
 ];
 
-export default function ProviderDetailPage({ params }: { params: { slug: string } }) {
-  const provider = providers.find((item) => item.slug === params.slug);
+export default async function ProviderDetailPage({ params }: { params: { slug: string } }) {
+  const provider = await getProviderBySlug(params.slug);
 
   if (!provider) notFound();
 
-  const serviceName = getServiceNameBySlug(provider.serviceCategory).replace(/s$/, '');
+  const serviceName = (await getServiceNameBySlug(provider.serviceCategory)).replace(/s$/, '');
   const hasPriceGuide = Boolean(provider.priceGuide?.trim());
 
   return (
@@ -85,7 +85,7 @@ export default function ProviderDetailPage({ params }: { params: { slug: string 
               WhatsApp
             </a>
             <Link
-              href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.name)}`}
+              href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.slug)}`}
               className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-teal-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-600"
             >
               Request Service
@@ -191,7 +191,7 @@ export default function ProviderDetailPage({ params }: { params: { slug: string 
             WhatsApp
           </a>
           <Link
-            href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.name)}`}
+            href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.slug)}`}
             className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-teal-600 px-2 text-xs font-semibold text-white"
           >
             Request

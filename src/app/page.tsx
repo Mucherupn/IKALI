@@ -1,9 +1,17 @@
 import Link from 'next/link';
 import { ProviderCard } from '@/components/provider-card';
 import { ServiceCard } from '@/components/service-card';
-import { providers, serviceCategories } from '@/data/mock-data';
+import { getProviders, getServiceCategories } from '@/lib/data';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [services, providers] = await Promise.all([getServiceCategories(), getProviders()]);
+
+  const serviceNamesBySlug = Object.fromEntries(services.map((service) => [service.slug, service.name]));
+  const providerCountsByService = providers.reduce<Record<string, number>>((counts, provider) => {
+    counts[provider.serviceCategory] = (counts[provider.serviceCategory] ?? 0) + 1;
+    return counts;
+  }, {});
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <section className="card overflow-hidden bg-gradient-to-br from-teal-800 to-teal-600 p-8 text-white md:p-12">
@@ -36,8 +44,8 @@ export default function HomePage() {
           </Link>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {serviceCategories.slice(0, 8).map((service) => (
-            <ServiceCard key={service.slug} service={service} />
+          {services.slice(0, 8).map((service) => (
+            <ServiceCard key={service.slug} service={service} providerCount={providerCountsByService[service.slug] ?? 0} />
           ))}
         </div>
       </section>
@@ -51,7 +59,7 @@ export default function HomePage() {
         </div>
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {providers.map((provider) => (
-            <ProviderCard key={provider.id} provider={provider} />
+            <ProviderCard key={provider.id} provider={provider} serviceName={serviceNamesBySlug[provider.serviceCategory]} />
           ))}
         </div>
       </section>

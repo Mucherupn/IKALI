@@ -1,7 +1,13 @@
 import { ServiceCard } from '@/components/service-card';
-import { serviceCategories } from '@/data/mock-data';
+import { getProviders, getServiceCategories } from '@/lib/data';
 
-export default function ServicesPage() {
+export default async function ServicesPage() {
+  const [services, providers] = await Promise.all([getServiceCategories(), getProviders()]);
+  const providerCountsByService = providers.reduce<Record<string, number>>((counts, provider) => {
+    counts[provider.serviceCategory] = (counts[provider.serviceCategory] ?? 0) + 1;
+    return counts;
+  }, {});
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <header>
@@ -13,8 +19,8 @@ export default function ServicesPage() {
       </header>
 
       <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {serviceCategories.map((service) => (
-          <ServiceCard key={service.slug} service={service} />
+        {services.map((service) => (
+          <ServiceCard key={service.slug} service={service} providerCount={providerCountsByService[service.slug] ?? 0} />
         ))}
       </section>
     </div>

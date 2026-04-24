@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useMemo, useState } from 'react';
-import { serviceCategories } from '@/data/mock-data';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { providers as mockProviders, serviceCategories as mockServiceCategories } from '@/data/mock-data';
+import { Database } from '@/lib/database.types';
+import { getSupabaseClient } from '@/lib/supabase';
 
 type RequestFormData = {
   customerName: string;
@@ -16,10 +18,13 @@ type RequestFormData = {
   providerReference: string;
 };
 
+type ServiceOption = Pick<Database['public']['Tables']['service_categories']['Row'], 'id' | 'name' | 'slug'>;
+type ProviderOption = Pick<Database['public']['Tables']['providers']['Row'], 'id' | 'full_name' | 'slug'>;
+
 const initialFormState: RequestFormData = {
   customerName: '',
   phoneNumber: '',
-  serviceSlug: serviceCategories[0]?.slug ?? '',
+  serviceSlug: mockServiceCategories[0]?.slug ?? '',
   location: '',
   preferredDate: '',
   preferredTime: '',
@@ -29,17 +34,63 @@ const initialFormState: RequestFormData = {
 };
 
 export function RequestForm({ initialService, initialProvider }: { initialService?: string; initialProvider?: string }) {
-  const [formData, setFormData] = useState<RequestFormData>({
-    ...initialFormState,
-    serviceSlug: initialService && serviceCategories.some((service) => service.slug === initialService) ? initialService : initialFormState.serviceSlug,
-    providerReference: initialProvider ?? ''
-  });
+  const [services, setServices] = useState<ServiceOption[]>(
+    mockServiceCategories.map((service) => ({ id: service.slug, name: service.name, slug: service.slug }))
+  );
+  const [providers, setProviders] = useState<ProviderOption[]>(
+    mockProviders.map((provider) => ({ id: provider.id, full_name: provider.name, slug: provider.slug }))
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+
+  const [formData, setFormData] = useState<RequestFormData>({
+    ...initialFormState,
+    serviceSlug: initialService ?? initialFormState.serviceSlug,
+    providerReference: initialProvider ?? ''
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSupabaseOptions() {
+      try {
+        const supabase = getSupabaseClient();
+
+        const [{ data: serviceRows, error: servicesError }, { data: providerRows, error: providersError }] = await Promise.all([
+          supabase.from('service_categories').select('id, name, slug').eq('is_active', true).order('name'),
+          supabase.from('providers').select('id, full_name, slug').order('full_name')
+        ]);
+
+        if (!isMounted) return;
+
+        if (!servicesError && serviceRows && serviceRows.length > 0) {
+          setServices(serviceRows);
+          setFormData((current) => {
+            const isCurrentValid = serviceRows.some((service) => service.slug === current.serviceSlug);
+            const nextSlug = isCurrentValid ? current.serviceSlug : serviceRows[0].slug;
+            return { ...current, serviceSlug: nextSlug };
+          });
+        }
+
+        if (!providersError && providerRows && providerRows.length > 0) {
+          setProviders(providerRows);
+        }
+      } catch {
+        // Keep mock fallback silently so UI remains usable.
+      }
+    }
+
+    loadSupabaseOptions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const selectedServiceName = useMemo(
-    () => serviceCategories.find((service) => service.slug === formData.serviceSlug)?.name ?? 'Selected service',
-    [formData.serviceSlug]
+    () => services.find((service) => service.slug === formData.serviceSlug)?.name ?? 'Selected service',
+    [formData.serviceSlug, services]
   );
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -50,19 +101,48 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
     }
 
     setIsSubmitting(true);
+    setSubmitError('');
 
-    const payload = {
-      ...formData,
-      submittedAt: new Date().toISOString()
-    };
+    try {
+      const supabase = getSupabaseClient();
 
-    await new Promise((resolve) => setTimeout(resolve, 900));
+      const selectedService = services.find((service) => service.slug === formData.serviceSlug);
+      if (!selectedService) {
+        throw new Error('Service not found');
+      }
 
-    // TODO(phase-5): replace this with Supabase request insert once backend flow is finalized.
-    console.log('Request service payload', payload);
+      const providerId = providers.find(
+        (provider) =>
+          provider.slug === formData.providerReference ||
+          provider.full_name.toLowerCase() === formData.providerReference.toLowerCase().trim()
+      )?.id;
 
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+      const payload: Database['public']['Tables']['job_requests']['Insert'] = {
+        customer_name: formData.customerName.trim(),
+        customer_phone: formData.phoneNumber.trim(),
+        service_category_id: selectedService.id,
+        provider_id: providerId ?? null,
+        location: formData.location.trim(),
+        preferred_date: formData.preferredDate || null,
+        preferred_time: formData.preferredTime || null,
+        description: formData.jobDescription.trim() || null,
+        urgency: formData.urgency,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase.from('job_requests').insert(payload);
+
+      if (error) {
+        throw error;
+      }
+
+      setIsSubmitted(true);
+    } catch {
+      setSubmitError('We could not submit your request right now. Please try again in a moment.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSubmitted) {
@@ -137,8 +217,8 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
             onChange={(event) => setFormData((current) => ({ ...current, serviceSlug: event.target.value }))}
             className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
           >
-            {serviceCategories.map((service) => (
-              <option key={service.slug} value={service.slug}>
+            {services.map((service) => (
+              <option key={service.id} value={service.slug}>
                 {service.name}
               </option>
             ))}
@@ -245,6 +325,8 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
           Request linked to provider: <span className="font-semibold">{formData.providerReference}</span>
         </p>
       ) : null}
+
+      {submitError ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{submitError}</p> : null}
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.10)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
         <button
