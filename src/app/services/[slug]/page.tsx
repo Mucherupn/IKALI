@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ProviderCard } from '@/components/provider-card';
+import { ProviderDirectory } from '@/components/provider-directory';
 import { providers, serviceCategories } from '@/data/mock-data';
 
 export default function ServiceDetailsPage({ params }: { params: { slug: string } }) {
@@ -14,17 +14,20 @@ export default function ServiceDetailsPage({ params }: { params: { slug: string 
       <Link href="/services" className="text-sm font-semibold text-teal-700">
         ← Back to services
       </Link>
-      <h1 className="mt-3 text-3xl font-bold text-slate-900">{service.name}</h1>
-      <p className="mt-2 text-slate-600">{service.shortDescription}</p>
 
-      <h2 className="mt-10 text-xl font-semibold text-slate-900">Available professionals</h2>
-      <div className="mt-4 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-        {serviceProviders.length > 0 ? (
-          serviceProviders.map((provider) => <ProviderCard key={provider.id} provider={provider} />)
-        ) : (
-          <p className="text-slate-600">No providers listed yet. Check back soon.</p>
-        )}
-      </div>
+      <header className="mt-4">
+        <h1 className="text-3xl font-bold text-slate-900">{service.name} Services in Nairobi</h1>
+        <p className="mt-2 max-w-3xl text-slate-600">
+          Browse available {service.name.toLowerCase()} professionals, compare ratings, and contact the right provider for your
+          project in minutes.
+        </p>
+      </header>
+
+      <ProviderDirectory
+        providers={serviceProviders}
+        withSearch
+        searchPlaceholder={`Search ${service.name.toLowerCase()} providers by name or area`}
+      />
     </div>
   );
 }
