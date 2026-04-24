@@ -56,7 +56,12 @@ function normalizeProvider(provider: {
     phone: provider.phone,
     whatsapp: provider.whatsapp,
     availability: provider.availability_text ?? 'Contact for availability',
-    reviews: provider.reviews
+    reviews: provider.reviews,
+    reviewCount: provider.reviews,
+    phoneVerified: provider.is_verified,
+    experienceChecked: provider.years_experience > 0,
+    workHistoryReviewed: provider.completed_jobs > 0,
+    responseTime: provider.is_verified ? 'Typically within 1 hour' : 'Response time being verified'
   };
 }
 

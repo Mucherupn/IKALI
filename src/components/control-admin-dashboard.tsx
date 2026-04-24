@@ -409,6 +409,13 @@ export function ControlAdminDashboard() {
         ))}
       </section>
 
+      <section className="card border border-slate-200 bg-slate-50 p-4">
+        <h2 className="text-base font-semibold text-slate-900">Reviews (coming soon)</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Later admins will be able to approve, hide, or flag reviews to maintain marketplace trust and safety.
+        </p>
+      </section>
+
       <section className="card p-2 sm:p-3">
         <div className="flex flex-wrap gap-2">
           {TAB_OPTIONS.map((tab) => (

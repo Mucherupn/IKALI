@@ -326,6 +326,11 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
         </p>
       ) : null}
 
+
+      <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200">
+        I Kali uses your contact details only to connect you with a suitable professional.
+      </p>
+
       {submitError ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{submitError}</p> : null}
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.10)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
