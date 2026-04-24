@@ -2,17 +2,18 @@
 
 import { useMemo, useState } from 'react';
 import { ProviderCard } from '@/components/provider-card';
-import { nairobiAreas } from '@/data/mock-data';
 import { Provider } from '@/lib/types';
 
 type ProviderDirectoryProps = {
   providers: Provider[];
+  serviceNamesBySlug?: Record<string, string>;
   withSearch?: boolean;
   searchPlaceholder?: string;
 };
 
 export function ProviderDirectory({
   providers,
+  serviceNamesBySlug,
   withSearch = true,
   searchPlaceholder = 'Search by name, service, or location'
 }: ProviderDirectoryProps) {
@@ -21,12 +22,19 @@ export function ProviderDirectory({
   const [minimumRating, setMinimumRating] = useState('all');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
 
+  const areas = useMemo(() => {
+    const unique = Array.from(new Set(providers.map((provider) => provider.location.split(',')[0]?.trim()).filter(Boolean)));
+    return unique.sort((a, b) => a.localeCompare(b));
+  }, [providers]);
+
   const filteredProviders = useMemo(() => {
     return providers.filter((provider) => {
+      const serviceName = serviceNamesBySlug?.[provider.serviceCategory] ?? provider.serviceCategory;
+
       const matchesQuery =
         query.length === 0 ||
         provider.name.toLowerCase().includes(query.toLowerCase()) ||
-        provider.serviceCategory.toLowerCase().includes(query.toLowerCase()) ||
+        serviceName.toLowerCase().includes(query.toLowerCase()) ||
         provider.location.toLowerCase().includes(query.toLowerCase());
 
       const matchesLocation =
@@ -38,7 +46,7 @@ export function ProviderDirectory({
 
       return matchesQuery && matchesLocation && matchesRating && matchesVerification;
     });
-  }, [minimumRating, providers, query, selectedLocation, verifiedOnly]);
+  }, [minimumRating, providers, query, selectedLocation, serviceNamesBySlug, verifiedOnly]);
 
   return (
     <div className="mt-6 space-y-6">
@@ -65,7 +73,7 @@ export function ProviderDirectory({
               className="focus-ring w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
             >
               <option value="all">All Nairobi</option>
-              {nairobiAreas.map((area) => (
+              {areas.map((area) => (
                 <option key={area} value={area}>
                   {area}
                 </option>
@@ -101,7 +109,11 @@ export function ProviderDirectory({
       {filteredProviders.length > 0 ? (
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {filteredProviders.map((provider) => (
-            <ProviderCard key={provider.id} provider={provider} />
+            <ProviderCard
+              key={provider.id}
+              provider={provider}
+              serviceName={serviceNamesBySlug?.[provider.serviceCategory]}
+            />
           ))}
         </div>
       ) : (

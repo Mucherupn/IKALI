@@ -1,9 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { getServiceNameBySlug } from '@/data/mock-data';
 import { Provider } from '@/lib/types';
 
-export function ProviderCard({ provider }: { provider: Provider }) {
+export function ProviderCard({ provider, serviceName }: { provider: Provider; serviceName?: string }) {
   return (
     <article className="card flex h-full flex-col overflow-hidden">
       <div className="relative h-48 w-full">
@@ -14,7 +13,7 @@ export function ProviderCard({ provider }: { provider: Provider }) {
         <div className="flex items-start justify-between gap-2">
           <div>
             <h3 className="text-lg font-semibold text-slate-900">{provider.name}</h3>
-            <p className="text-sm text-slate-600">{getServiceNameBySlug(provider.serviceCategory)}</p>
+            <p className="text-sm text-slate-600">{serviceName ?? provider.serviceCategory}</p>
           </div>
           {provider.verified ? (
             <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">Verified</span>

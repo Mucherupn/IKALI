@@ -1,7 +1,10 @@
 import { ProviderDirectory } from '@/components/provider-directory';
-import { providers } from '@/data/mock-data';
+import { getProviders, getServiceCategories } from '@/lib/data';
 
-export default function ProvidersPage() {
+export default async function ProvidersPage() {
+  const [providers, services] = await Promise.all([getProviders(), getServiceCategories()]);
+  const serviceNamesBySlug = Object.fromEntries(services.map((service) => [service.slug, service.name]));
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <header>
@@ -11,7 +14,12 @@ export default function ProvidersPage() {
         </p>
       </header>
 
-      <ProviderDirectory providers={providers} withSearch searchPlaceholder="Search providers by name, service, or location" />
+      <ProviderDirectory
+        providers={providers}
+        serviceNamesBySlug={serviceNamesBySlug}
+        withSearch
+        searchPlaceholder="Search providers by name, service, or location"
+      />
     </div>
   );
 }
