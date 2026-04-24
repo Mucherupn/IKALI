@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ProviderCard } from '@/components/provider-card';
 import { ServiceCard } from '@/components/service-card';
 import { getProviders, getServiceCategories } from '@/lib/data';
+import { GlobalSearch } from '@/components/global-search';
 
 export default async function HomePage() {
   const [services, providers] = await Promise.all([getServiceCategories(), getProviders()]);
@@ -34,6 +35,8 @@ export default async function HomePage() {
             Explore Services
           </Link>
         </div>
+
+        <GlobalSearch services={services} />
       </section>
 
       <section className="mt-12">

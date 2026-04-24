@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { ProviderCard } from '@/components/provider-card';
+import { POPULAR_LOCATIONS, SUGGESTED_SEARCHES, extractSearchIntent, matchesProviderSearch } from '@/lib/search';
 import { Provider } from '@/lib/types';
 
 type ProviderDirectoryProps = {
@@ -9,44 +11,57 @@ type ProviderDirectoryProps = {
   serviceNamesBySlug?: Record<string, string>;
   withSearch?: boolean;
   searchPlaceholder?: string;
+  initialQuery?: string;
+  initialLocation?: string;
+  showSuggestions?: boolean;
 };
 
 export function ProviderDirectory({
   providers,
   serviceNamesBySlug,
   withSearch = true,
-  searchPlaceholder = 'Search by name, service, or location'
+  searchPlaceholder = 'Search by name, service, or location',
+  initialQuery = '',
+  initialLocation = '',
+  showSuggestions = false
 }: ProviderDirectoryProps) {
-  const [query, setQuery] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('all');
+  const intent = extractSearchIntent(initialQuery);
+  const [query, setQuery] = useState(initialQuery);
+  const [selectedLocation, setSelectedLocation] = useState(initialLocation || intent.locationQuery || 'all');
   const [minimumRating, setMinimumRating] = useState('all');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
 
   const areas = useMemo(() => {
-    const unique = Array.from(new Set(providers.map((provider) => provider.location.split(',')[0]?.trim()).filter(Boolean)));
-    return unique.sort((a, b) => a.localeCompare(b));
+    const unique = new Set<string>(POPULAR_LOCATIONS);
+    for (const provider of providers) {
+      const primaryArea = provider.location.split(',')[0]?.trim();
+      if (primaryArea) unique.add(primaryArea);
+    }
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
   }, [providers]);
 
   const filteredProviders = useMemo(() => {
+    const parsedQuery = extractSearchIntent(query);
+    const normalizedLocationSearch = (selectedLocation === 'all' ? parsedQuery.locationQuery : selectedLocation).trim().toLowerCase();
+
     return providers.filter((provider) => {
       const serviceName = serviceNamesBySlug?.[provider.serviceCategory] ?? provider.serviceCategory;
+      const matchesQuery = matchesProviderSearch(provider, serviceName, parsedQuery.serviceQuery || query);
 
-      const matchesQuery =
-        query.length === 0 ||
-        provider.name.toLowerCase().includes(query.toLowerCase()) ||
-        serviceName.toLowerCase().includes(query.toLowerCase()) ||
-        provider.location.toLowerCase().includes(query.toLowerCase());
-
-      const matchesLocation =
-        selectedLocation === 'all' || provider.location.toLowerCase().includes(selectedLocation.toLowerCase());
-
+      const matchesLocation = !normalizedLocationSearch || provider.location.toLowerCase().includes(normalizedLocationSearch);
       const matchesRating = minimumRating === 'all' || provider.rating >= Number(minimumRating);
-
       const matchesVerification = !verifiedOnly || provider.verified;
 
       return matchesQuery && matchesLocation && matchesRating && matchesVerification;
     });
   }, [minimumRating, providers, query, selectedLocation, serviceNamesBySlug, verifiedOnly]);
+
+  const clearFilters = () => {
+    setQuery('');
+    setSelectedLocation('all');
+    setMinimumRating('all');
+    setVerifiedOnly(false);
+  };
 
   return (
     <div className="mt-6 space-y-6">
@@ -95,37 +110,82 @@ export function ProviderDirectory({
           </label>
         </div>
 
-        <label className="mt-4 inline-flex items-center gap-2 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            checked={verifiedOnly}
-            onChange={(event) => setVerifiedOnly(event.target.checked)}
-            className="focus-ring h-4 w-4 rounded border-slate-300"
-          />
-          Verified providers only
-        </label>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={verifiedOnly}
+              onChange={(event) => setVerifiedOnly(event.target.checked)}
+              className="focus-ring h-4 w-4 rounded border-slate-300"
+            />
+            Verified providers only
+          </label>
+
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="focus-ring rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Clear filters
+          </button>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Popular locations</span>
+          {POPULAR_LOCATIONS.map((location) => (
+            <button
+              key={location}
+              type="button"
+              onClick={() => setSelectedLocation(location)}
+              className="focus-ring rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
+            >
+              {location}
+            </button>
+          ))}
+        </div>
+
+        {showSuggestions ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Suggested searches</span>
+            {SUGGESTED_SEARCHES.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => setQuery(suggestion)}
+                className="focus-ring rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs text-teal-900 hover:bg-teal-100"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       {filteredProviders.length > 0 ? (
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {filteredProviders.map((provider) => (
-            <ProviderCard
-              key={provider.id}
-              provider={provider}
-              serviceName={serviceNamesBySlug?.[provider.serviceCategory]}
-            />
+            <ProviderCard key={provider.id} provider={provider} serviceName={serviceNamesBySlug?.[provider.serviceCategory]} />
           ))}
         </div>
       ) : (
         <section className="card px-6 py-10 text-center">
-          <h3 className="text-lg font-semibold text-slate-900">No providers found for this service in your area yet.</h3>
-          <p className="mt-2 text-sm text-slate-600">Try adjusting your filters or request a provider and we will source one for you.</p>
-          <a
-            href="/request"
-            className="focus-ring mt-5 inline-flex rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800"
-          >
-            Request this service instead
-          </a>
+          <h3 className="text-lg font-semibold text-slate-900">No matching professionals found yet.</h3>
+          <p className="mt-2 text-sm text-slate-600">Try adjusting your search or request this service and we will source one for you.</p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="focus-ring inline-flex rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Clear filters
+            </button>
+            <Link
+              href="/request"
+              className="focus-ring inline-flex rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800"
+            >
+              Request this service
+            </Link>
+          </div>
         </section>
       )}
     </div>
