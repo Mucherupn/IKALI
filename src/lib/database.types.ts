@@ -128,6 +128,12 @@ export type Database = {
           description: string | null;
           urgency: string | null;
           status: string;
+          payment_status: string | null;
+          payment_amount: number | null;
+          payment_reference: string | null;
+          payment_phone: string | null;
+          payment_type: string | null;
+          paid_at: string | null;
           created_at: string;
         },
         {
@@ -142,6 +148,12 @@ export type Database = {
           description?: string | null;
           urgency?: string | null;
           status?: string;
+          payment_status?: string | null;
+          payment_amount?: number | null;
+          payment_reference?: string | null;
+          payment_phone?: string | null;
+          payment_type?: string | null;
+          paid_at?: string | null;
           created_at?: string;
         },
         {
@@ -156,6 +168,12 @@ export type Database = {
           description?: string | null;
           urgency?: string | null;
           status?: string;
+          payment_status?: string | null;
+          payment_amount?: number | null;
+          payment_reference?: string | null;
+          payment_phone?: string | null;
+          payment_type?: string | null;
+          paid_at?: string | null;
           created_at?: string;
         }
       >;
