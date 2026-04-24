@@ -27,7 +27,7 @@ export default async function ServiceDetailsPage({ params, searchParams }: Servi
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-      <Link href="/services" className="text-sm font-semibold text-teal-700">
+      <Link href="/services" className="text-sm font-semibold text-[#D71920]">
         ← Back to services
       </Link>
 
@@ -40,7 +40,7 @@ export default async function ServiceDetailsPage({ params, searchParams }: Servi
         <div className="mt-5">
           <Link
             href={`/request?service=${service.slug}`}
-            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-800"
+            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-[#D71920] px-5 py-3 text-sm font-semibold text-white hover:bg-[#A80F1A]"
           >
             Request this service
           </Link>

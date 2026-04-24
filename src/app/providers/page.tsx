@@ -3,10 +3,7 @@ import { ProviderDirectory } from '@/components/provider-directory';
 import { getProviders, getServiceCategories } from '@/lib/data';
 
 type ProvidersPageProps = {
-  searchParams?: Promise<{
-    q?: string;
-    location?: string;
-  }>;
+  searchParams?: Promise<{ q?: string; location?: string }>;
 };
 
 export default async function ProvidersPage({ searchParams }: ProvidersPageProps) {
@@ -15,12 +12,11 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
   const serviceNamesBySlug = Object.fromEntries(services.map((service) => [service.slug, service.name]));
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-      <header>
-        <h1 className="text-3xl font-bold text-slate-900">Provider Directory</h1>
-        <p className="mt-2 max-w-2xl text-slate-600">
-          Explore our full network of service providers, filter by area and quality, then contact the best fit directly.
-        </p>
+    <div className="section-shell py-10">
+      <header className="card-premium p-6 sm:p-8">
+        <p className="eyebrow">Verified network</p>
+        <h1 className="page-title mt-2">Provider Directory</h1>
+        <p className="mt-3 max-w-2xl muted-text">Filter by location, rating, and verification signals to find the right professional faster.</p>
       </header>
 
       <ProviderDirectory

@@ -439,7 +439,7 @@ export function ControlAdminDashboard() {
 
       {!supabaseReady && <p className="card border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">Supabase not reachable. Admin sections are in empty-state mode.</p>}
       {error && <p className="card border-rose-300 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
-      {successMessage && <p className="card border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700">{successMessage}</p>}
+      {successMessage && <p className="card border-red-300 bg-red-50 p-3 text-sm text-red-700">{successMessage}</p>}
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {stats.map((item) => (
@@ -640,7 +640,7 @@ export function ControlAdminDashboard() {
                               </button>
                               <button
                                 onClick={() => toggleProviderFlag(provider, 'is_verified')}
-                                className="rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800"
+                                className="rounded-md bg-red-100 px-2 py-1 text-xs font-semibold text-red-800"
                               >
                                 {provider.is_verified ? 'Unverify' : 'Verify'}
                               </button>
@@ -671,7 +671,7 @@ export function ControlAdminDashboard() {
                         <button onClick={() => startEditProvider(provider)} className="rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-800">
                           Edit
                         </button>
-                        <button onClick={() => toggleProviderFlag(provider, 'is_verified')} className="rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">
+                        <button onClick={() => toggleProviderFlag(provider, 'is_verified')} className="rounded-md bg-red-100 px-2 py-1 text-xs font-semibold text-red-800">
                           {provider.is_verified ? 'Unverify' : 'Verify'}
                         </button>
                         <button onClick={() => deleteProvider(provider.id)} className="rounded-md bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700">
@@ -777,7 +777,7 @@ export function ControlAdminDashboard() {
                               </button>
                               <button
                                 onClick={() => toggleCategoryActive(category)}
-                                className="rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800"
+                                className="rounded-md bg-red-100 px-2 py-1 text-xs font-semibold text-red-800"
                               >
                                 Toggle active
                               </button>
@@ -802,7 +802,7 @@ export function ControlAdminDashboard() {
                         <button onClick={() => startEditCategory(category)} className="rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-800">
                           Edit
                         </button>
-                        <button onClick={() => toggleCategoryActive(category)} className="rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">
+                        <button onClick={() => toggleCategoryActive(category)} className="rounded-md bg-red-100 px-2 py-1 text-xs font-semibold text-red-800">
                           Toggle
                         </button>
                         <button onClick={() => deleteCategory(category.id)} className="rounded-md bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700">

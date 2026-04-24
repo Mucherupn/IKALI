@@ -48,13 +48,13 @@ export function ProviderCard({ provider, serviceName }: { provider: Provider; se
           </a>
           <a
             href={`https://wa.me/${provider.whatsapp}`}
-            className="focus-ring rounded-lg bg-teal-700 px-3 py-2 text-center text-sm font-medium text-white transition hover:bg-teal-800"
+            className="focus-ring rounded-lg bg-[#D71920] px-3 py-2 text-center text-sm font-medium text-white transition hover:bg-[#A80F1A]"
           >
             WhatsApp
           </a>
           <Link
             href={`/providers/${provider.slug}`}
-            className="focus-ring rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-center text-sm font-medium text-teal-900 transition hover:bg-teal-100"
+            className="focus-ring rounded-lg border border-[#fecdd3] bg-[#fff1f2] px-3 py-2 text-center text-sm font-medium text-[#7f1d1d] transition hover:bg-[#ffe4e6]"
           >
             View profile
           </Link>
