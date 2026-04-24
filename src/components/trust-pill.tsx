@@ -4,9 +4,9 @@ type TrustPillProps = {
 };
 
 const toneClasses: Record<NonNullable<TrustPillProps['tone']>, string> = {
-  verified: 'bg-emerald-100 text-emerald-800',
-  neutral: 'bg-slate-100 text-slate-700',
-  pending: 'bg-amber-100 text-amber-800'
+  verified: 'bg-[#fff1f2] text-[#9f1239] border border-[#fecdd3]',
+  neutral: 'bg-[#f3f4f6] text-[#111827] border border-[#e5e7eb]',
+  pending: 'bg-amber-50 text-amber-800 border border-amber-200'
 };
 
 export function TrustPill({ label, tone = 'neutral' }: TrustPillProps) {

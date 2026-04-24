@@ -55,20 +55,20 @@ export function GlobalSearch({ services }: GlobalSearchProps) {
         />
         <button
           type="submit"
-          className="focus-ring min-h-11 rounded-xl bg-teal-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-950"
+          className="focus-ring min-h-11 rounded-xl bg-[#111827] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#080808]"
         >
           Search
         </button>
       </form>
 
       <div className="mt-4 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-        <span className="font-semibold text-teal-50">Suggested:</span>
+        <span className="font-semibold text-red-100">Suggested:</span>
         {SUGGESTED_SEARCHES.map((suggestion) => (
           <button
             key={suggestion}
             type="button"
             onClick={() => routeSearch(suggestion)}
-            className="focus-ring rounded-full border border-teal-100/40 bg-teal-700/30 px-3 py-1 text-teal-50 hover:bg-teal-700/50"
+            className="focus-ring rounded-full border border-red-200/40 bg-[#D71920]/30 px-3 py-1 text-red-100 hover:bg-[#D71920]/50"
           >
             {suggestion}
           </button>
@@ -76,13 +76,13 @@ export function GlobalSearch({ services }: GlobalSearchProps) {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-        <span className="font-semibold text-teal-50">Popular locations:</span>
+        <span className="font-semibold text-red-100">Popular locations:</span>
         {sortedLocations.map((location) => (
           <button
             key={location}
             type="button"
             onClick={() => routeSearch(`providers in ${location}`)}
-            className="focus-ring rounded-full border border-teal-100/40 px-3 py-1 text-teal-50 hover:bg-teal-700/40"
+            className="focus-ring rounded-full border border-red-200/40 px-3 py-1 text-red-100 hover:bg-[#D71920]/40"
           >
             {location}
           </button>

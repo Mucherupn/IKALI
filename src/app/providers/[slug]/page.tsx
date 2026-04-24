@@ -33,13 +33,13 @@ export default async function ProviderDetailPage({ params }: { params: Promise<{
   const reviewCount = provider.reviewCount ?? provider.reviews;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 pb-28 sm:px-6 sm:py-8 md:pb-10 lg:px-8">
-      <Link href="/providers" className="text-sm font-semibold text-teal-700 hover:text-teal-800">
+    <div className="section-shell max-w-5xl space-y-6 py-6 pb-28 sm:py-8 md:pb-10">
+      <Link href="/providers" className="text-sm font-semibold text-[#D71920] hover:text-[#A80F1A]">
         ← Back to providers
       </Link>
 
       <section className="card overflow-hidden">
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-teal-800 p-5 text-white sm:p-7">
+        <div className="bg-gradient-to-br from-[#080808] via-[#111827] to-[#1f2937] p-5 text-white sm:p-7">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             <div className="relative h-28 w-28 overflow-hidden rounded-2xl border-4 border-white/20 shadow-lg sm:h-36 sm:w-36">
               <Image src={provider.photo} alt={provider.name} fill className="object-cover" />
@@ -54,7 +54,7 @@ export default async function ProviderDetailPage({ params }: { params: Promise<{
                 />
               </div>
 
-              <p className="text-sm font-medium text-teal-100 sm:text-base">
+              <p className="text-sm font-medium text-gray-200 sm:text-base">
                 {serviceName} · {provider.location}
               </p>
 
@@ -88,13 +88,13 @@ export default async function ProviderDetailPage({ params }: { params: Promise<{
             </a>
             <a
               href={`https://wa.me/${provider.whatsapp}`}
-              className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+              className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-[#111827] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#080808]"
             >
               WhatsApp
             </a>
             <Link
               href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.slug)}`}
-              className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-teal-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-600"
+              className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-[#fff1f2]0 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#A80F1A]"
             >
               Book this professional
             </Link>
@@ -114,7 +114,7 @@ export default async function ProviderDetailPage({ params }: { params: Promise<{
           />
           <TrustPill label={reviewCount > 0 ? 'Customer rated' : 'Customer ratings pending'} tone={reviewCount > 0 ? 'neutral' : 'pending'} />
         </div>
-        <p className="mt-4 rounded-xl bg-teal-50 px-4 py-3 text-sm text-teal-900 ring-1 ring-teal-100">
+        <p className="mt-4 rounded-xl bg-[#fff1f2] px-4 py-3 text-sm text-[#7f1d1d] ring-1 ring-[#fecdd3]">
           Only share job details through trusted I Kali contact channels. Avoid sending deposits before confirming the job scope.
         </p>
       </section>
@@ -203,13 +203,13 @@ export default async function ProviderDetailPage({ params }: { params: Promise<{
           </a>
           <a
             href={`https://wa.me/${provider.whatsapp}`}
-            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-emerald-500 px-2 text-xs font-semibold text-white"
+            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-[#111827] px-2 text-xs font-semibold text-white"
           >
             WhatsApp
           </a>
           <Link
             href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.slug)}`}
-            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-teal-600 px-2 text-xs font-semibold text-white"
+            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-[#D71920] px-2 text-xs font-semibold text-white"
           >
             Book
           </Link>

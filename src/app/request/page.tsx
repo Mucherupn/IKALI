@@ -8,11 +8,12 @@ export default async function RequestPage({
   const params = (await searchParams) ?? {};
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Request a booking</h1>
-      <p className="mt-2 text-slate-600">
-        Tell us what you need in a few quick steps and we will connect you with the right I Kali professional.
-      </p>
+    <div className="section-shell max-w-3xl py-8">
+      <header className="card-premium p-6 sm:p-8">
+        <p className="eyebrow">Secure booking</p>
+        <h1 className="page-title mt-2">Request a Booking</h1>
+        <p className="mt-3 muted-text">Share your needs in a few steps. We only use your contact details to connect you with the right I Kali professional.</p>
+      </header>
 
       <RequestForm initialService={params.service} initialProvider={params.provider} />
     </div>

@@ -1,12 +1,15 @@
 export default function ContactPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-bold text-slate-900">Contact</h1>
-      <p className="mt-2 text-slate-600">Reach out for partnerships, support, or onboarding inquiries.</p>
-      <div className="card mt-8 p-6 text-slate-700">
-        <p>Email: hello@ikali.co.ke</p>
-        <p className="mt-2">Phone: +254 700 000 000</p>
-        <p className="mt-2">Location: Nairobi, Kenya</p>
+    <div className="section-shell max-w-3xl py-10">
+      <header className="card-premium p-6 sm:p-8">
+        <p className="eyebrow">Contact</p>
+        <h1 className="page-title mt-2">Let&apos;s talk.</h1>
+        <p className="mt-3 muted-text">Reach out for partnerships, support, onboarding, or enterprise service needs.</p>
+      </header>
+      <div className="card-premium mt-6 space-y-3 p-6 text-gray-700">
+        <p><span className="font-semibold text-[#080808]">Email:</span> hello@ikali.co.ke</p>
+        <p><span className="font-semibold text-[#080808]">Phone:</span> +254 700 000 000</p>
+        <p><span className="font-semibold text-[#080808]">Location:</span> Nairobi, Kenya</p>
       </div>
     </div>
   );

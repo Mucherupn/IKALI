@@ -150,7 +150,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
 
   if (isSubmitted) {
     return (
-      <section className="card mt-8 p-6 sm:p-8">
+      <section className="card-premium mt-8 p-6 sm:p-8">
         <div className="mx-auto max-w-xl text-center">
           <p className="text-4xl" aria-hidden>
             ✅
@@ -177,7 +177,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
   }
 
   return (
-    <form onSubmit={onSubmit} className="card mt-8 space-y-5 p-5 pb-20 sm:p-6 sm:pb-6">
+    <form onSubmit={onSubmit} className="card-premium mt-8 space-y-5 p-5 pb-20 sm:p-6 sm:pb-6">
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <label htmlFor="customerName" className="mb-2 block text-sm font-semibold text-slate-700">
@@ -188,7 +188,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
             required
             value={formData.customerName}
             onChange={(event) => setFormData((current) => ({ ...current, customerName: event.target.value }))}
-            className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
+            className="focus-ring input-field"
             placeholder="Your full name"
           />
         </div>
@@ -203,7 +203,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
             required
             value={formData.phoneNumber}
             onChange={(event) => setFormData((current) => ({ ...current, phoneNumber: event.target.value }))}
-            className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
+            className="focus-ring input-field"
             placeholder="e.g. +254..."
           />
         </div>
@@ -219,7 +219,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
             required
             value={formData.serviceSlug}
             onChange={(event) => setFormData((current) => ({ ...current, serviceSlug: event.target.value }))}
-            className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
+            className="focus-ring input-field"
           >
             {services.map((service) => (
               <option key={service.id} value={service.slug}>
@@ -238,7 +238,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
             required
             value={formData.location}
             onChange={(event) => setFormData((current) => ({ ...current, location: event.target.value }))}
-            className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
+            className="focus-ring input-field"
             placeholder="Area, estate, or landmark"
           />
         </div>
@@ -254,7 +254,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
             type="date"
             value={formData.preferredDate}
             onChange={(event) => setFormData((current) => ({ ...current, preferredDate: event.target.value }))}
-            className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
+            className="focus-ring input-field"
           />
         </div>
 
@@ -267,7 +267,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
             type="time"
             value={formData.preferredTime}
             onChange={(event) => setFormData((current) => ({ ...current, preferredTime: event.target.value }))}
-            className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
+            className="focus-ring input-field"
           />
         </div>
       </div>
@@ -281,7 +281,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
           rows={4}
           value={formData.jobDescription}
           onChange={(event) => setFormData((current) => ({ ...current, jobDescription: event.target.value }))}
-          className="focus-ring w-full rounded-xl border border-slate-300 px-3 py-3"
+          className="focus-ring input-field min-h-28 py-3"
           placeholder="Briefly describe what you need done."
         />
       </div>
@@ -325,7 +325,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
           id="providerReference"
           value={formData.providerReference}
           onChange={(event) => setFormData((current) => ({ ...current, providerReference: event.target.value }))}
-          className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
+          className="focus-ring input-field"
         >
           <option value="">No specific professional</option>
           {providers.map((provider) => (
@@ -344,7 +344,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
       </div>
 
       {formData.providerReference ? (
-        <p className="rounded-xl bg-teal-50 px-3 py-2 text-sm text-teal-800 ring-1 ring-teal-100">
+        <p className="rounded-xl bg-[#fff1f2] px-3 py-2 text-sm text-[#A80F1A] ring-1 ring-[#fecdd3]">
           Request linked to provider: <span className="font-semibold">{formData.providerReference}</span>
         </p>
       ) : null}
@@ -361,7 +361,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
         <button
           type="submit"
           disabled={isSubmitting}
-          className="focus-ring inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-teal-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="focus-ring btn btn-primary inline-flex min-h-12 w-full items-center justify-center disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? 'Submitting booking request...' : `Request a booking for ${selectedServiceName}`}
         </button>

@@ -154,7 +154,7 @@ export function ProviderDirectory({
                 key={suggestion}
                 type="button"
                 onClick={() => setQuery(suggestion)}
-                className="focus-ring rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs text-teal-900 hover:bg-teal-100"
+                className="focus-ring rounded-full border border-[#fecdd3] bg-[#fff1f2] px-3 py-1 text-xs text-[#7f1d1d] hover:bg-[#ffe4e6]"
               >
                 {suggestion}
               </button>
@@ -189,7 +189,7 @@ export function ProviderDirectory({
             </button>
             <Link
               href="/request"
-              className="focus-ring inline-flex rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800"
+              className="focus-ring inline-flex rounded-lg bg-[#D71920] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#A80F1A]"
             >
               Request this service
             </Link>

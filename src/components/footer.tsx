@@ -2,15 +2,33 @@ import Link from 'next/link';
 
 export function Footer() {
   return (
-    <footer className="mt-20 border-t border-slate-200 bg-white/80">
-      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-slate-600 sm:px-6 lg:px-8">
-        <p className="font-medium text-slate-900">I Kali — Internet Jua Kali</p>
-        <p>Premium local services marketplace for Nairobi, Kenya.</p>
-        <p>© {new Date().getFullYear()} I Kali. All rights reserved.</p>
-        <Link href="/trust" className="w-fit font-medium text-teal-700 hover:text-teal-800">
-          Trust & Safety
-        </Link>
+    <footer className="mt-20 bg-[#0B0B0F] text-gray-300">
+      <div className="section-shell grid gap-8 py-10 sm:grid-cols-2">
+        <div>
+          <p className="text-xl font-extrabold text-white">
+            I <span className="text-[#D71920]">Kali</span>
+          </p>
+          <p className="mt-3 max-w-sm text-sm leading-6 text-gray-400">
+            Kenya&apos;s premium marketplace for trusted local services. Built for quality, speed, and confidence.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="space-y-2">
+            <p className="font-semibold text-white">Platform</p>
+            <Link href="/services" className="block hover:text-white">Services</Link>
+            <Link href="/providers" className="block hover:text-white">Providers</Link>
+            <Link href="/request" className="block hover:text-white">Request Service</Link>
+          </div>
+          <div className="space-y-2">
+            <p className="font-semibold text-white">Company</p>
+            <Link href="/trust" className="block hover:text-white">Trust & Safety</Link>
+            <Link href="/become-a-pro" className="block hover:text-white">Become a Pro</Link>
+            <Link href="/contact" className="block hover:text-white">Contact</Link>
+          </div>
+        </div>
       </div>
+      <div className="border-t border-white/10 py-4 text-center text-xs text-gray-500">© {new Date().getFullYear()} I Kali. All rights reserved.</div>
     </footer>
   );
 }
