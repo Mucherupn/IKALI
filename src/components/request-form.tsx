@@ -1,0 +1,260 @@
+'use client';
+
+import Link from 'next/link';
+import { FormEvent, useMemo, useState } from 'react';
+import { serviceCategories } from '@/data/mock-data';
+
+type RequestFormData = {
+  customerName: string;
+  phoneNumber: string;
+  serviceSlug: string;
+  location: string;
+  preferredDate: string;
+  preferredTime: string;
+  jobDescription: string;
+  urgency: 'not-urgent' | 'within-24-hours' | 'urgent-same-day';
+  providerReference: string;
+};
+
+const initialFormState: RequestFormData = {
+  customerName: '',
+  phoneNumber: '',
+  serviceSlug: serviceCategories[0]?.slug ?? '',
+  location: '',
+  preferredDate: '',
+  preferredTime: '',
+  jobDescription: '',
+  urgency: 'not-urgent',
+  providerReference: ''
+};
+
+export function RequestForm({ initialService, initialProvider }: { initialService?: string; initialProvider?: string }) {
+  const [formData, setFormData] = useState<RequestFormData>({
+    ...initialFormState,
+    serviceSlug: initialService && serviceCategories.some((service) => service.slug === initialService) ? initialService : initialFormState.serviceSlug,
+    providerReference: initialProvider ?? ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const selectedServiceName = useMemo(
+    () => serviceCategories.find((service) => service.slug === formData.serviceSlug)?.name ?? 'Selected service',
+    [formData.serviceSlug]
+  );
+
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!formData.customerName.trim() || !formData.phoneNumber.trim() || !formData.serviceSlug || !formData.location.trim()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const payload = {
+      ...formData,
+      submittedAt: new Date().toISOString()
+    };
+
+    await new Promise((resolve) => setTimeout(resolve, 900));
+
+    // TODO(phase-5): replace this with Supabase request insert once backend flow is finalized.
+    console.log('Request service payload', payload);
+
+    setIsSubmitting(false);
+    setIsSubmitted(true);
+  };
+
+  if (isSubmitted) {
+    return (
+      <section className="card mt-8 p-6 sm:p-8">
+        <div className="mx-auto max-w-xl text-center">
+          <p className="text-4xl" aria-hidden>
+            ✅
+          </p>
+          <h2 className="mt-4 text-2xl font-bold text-slate-900">Request sent successfully</h2>
+          <p className="mt-3 text-slate-600">
+            Your request has been received. An I Kali professional will contact you shortly.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Link href="/" className="focus-ring rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-800">
+              Back to Home
+            </Link>
+            <Link
+              href="/services"
+              className="focus-ring rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+            >
+              Browse Services
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="card mt-8 space-y-5 p-5 pb-20 sm:p-6 sm:pb-6">
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div>
+          <label htmlFor="customerName" className="mb-2 block text-sm font-semibold text-slate-700">
+            Customer name*
+          </label>
+          <input
+            id="customerName"
+            required
+            value={formData.customerName}
+            onChange={(event) => setFormData((current) => ({ ...current, customerName: event.target.value }))}
+            className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
+            placeholder="Your full name"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="phoneNumber" className="mb-2 block text-sm font-semibold text-slate-700">
+            Phone number*
+          </label>
+          <input
+            id="phoneNumber"
+            type="tel"
+            required
+            value={formData.phoneNumber}
+            onChange={(event) => setFormData((current) => ({ ...current, phoneNumber: event.target.value }))}
+            className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
+            placeholder="e.g. +254..."
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div>
+          <label htmlFor="service" className="mb-2 block text-sm font-semibold text-slate-700">
+            Service needed*
+          </label>
+          <select
+            id="service"
+            required
+            value={formData.serviceSlug}
+            onChange={(event) => setFormData((current) => ({ ...current, serviceSlug: event.target.value }))}
+            className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
+          >
+            {serviceCategories.map((service) => (
+              <option key={service.slug} value={service.slug}>
+                {service.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="location" className="mb-2 block text-sm font-semibold text-slate-700">
+            Location*
+          </label>
+          <input
+            id="location"
+            required
+            value={formData.location}
+            onChange={(event) => setFormData((current) => ({ ...current, location: event.target.value }))}
+            className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
+            placeholder="Area, estate, or landmark"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div>
+          <label htmlFor="preferredDate" className="mb-2 block text-sm font-semibold text-slate-700">
+            Preferred date
+          </label>
+          <input
+            id="preferredDate"
+            type="date"
+            value={formData.preferredDate}
+            onChange={(event) => setFormData((current) => ({ ...current, preferredDate: event.target.value }))}
+            className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="preferredTime" className="mb-2 block text-sm font-semibold text-slate-700">
+            Preferred time
+          </label>
+          <input
+            id="preferredTime"
+            type="time"
+            value={formData.preferredTime}
+            onChange={(event) => setFormData((current) => ({ ...current, preferredTime: event.target.value }))}
+            className="focus-ring min-h-12 w-full rounded-xl border border-slate-300 px-3"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="jobDescription" className="mb-2 block text-sm font-semibold text-slate-700">
+          Job description
+        </label>
+        <textarea
+          id="jobDescription"
+          rows={4}
+          value={formData.jobDescription}
+          onChange={(event) => setFormData((current) => ({ ...current, jobDescription: event.target.value }))}
+          className="focus-ring w-full rounded-xl border border-slate-300 px-3 py-3"
+          placeholder="Briefly describe what you need done."
+        />
+      </div>
+
+      <fieldset>
+        <legend className="mb-2 text-sm font-semibold text-slate-700">Urgency (optional)</legend>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {[
+            { value: 'not-urgent', label: 'Not urgent' },
+            { value: 'within-24-hours', label: 'Within 24 hours' },
+            { value: 'urgent-same-day', label: 'Urgent (same day)' }
+          ].map((option) => (
+            <label
+              key={option.value}
+              className="focus-ring flex min-h-12 cursor-pointer items-center rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
+            >
+              <input
+                type="radio"
+                name="urgency"
+                value={option.value}
+                checked={formData.urgency === option.value}
+                onChange={() =>
+                  setFormData((current) => ({
+                    ...current,
+                    urgency: option.value as RequestFormData['urgency']
+                  }))
+                }
+                className="mr-2"
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <div>
+        <p className="mb-2 text-sm font-semibold text-slate-700">Add photos (optional)</p>
+        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+          Image upload coming soon. You can still submit your request now.
+        </div>
+      </div>
+
+      {formData.providerReference ? (
+        <p className="rounded-xl bg-teal-50 px-3 py-2 text-sm text-teal-800 ring-1 ring-teal-100">
+          Request linked to provider: <span className="font-semibold">{formData.providerReference}</span>
+        </p>
+      ) : null}
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.10)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="focus-ring inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-teal-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSubmitting ? 'Submitting request...' : `Request ${selectedServiceName}`}
+        </button>
+      </div>
+    </form>
+  );
+}

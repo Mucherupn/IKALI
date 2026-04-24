@@ -85,7 +85,7 @@ export default function ProviderDetailPage({ params }: { params: { slug: string 
               WhatsApp
             </a>
             <Link
-              href="/request"
+              href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.name)}`}
               className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-teal-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-600"
             >
               Request Service
@@ -191,7 +191,7 @@ export default function ProviderDetailPage({ params }: { params: { slug: string 
             WhatsApp
           </a>
           <Link
-            href="/request"
+            href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.name)}`}
             className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-teal-600 px-2 text-xs font-semibold text-white"
           >
             Request

@@ -21,6 +21,14 @@ export default function ServiceDetailsPage({ params }: { params: { slug: string 
           Browse available {service.name.toLowerCase()} professionals, compare ratings, and contact the right provider for your
           project in minutes.
         </p>
+        <div className="mt-5">
+          <Link
+            href={`/request?service=${service.slug}`}
+            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-800"
+          >
+            Request {service.name}
+          </Link>
+        </div>
       </header>
 
       <ProviderDirectory
