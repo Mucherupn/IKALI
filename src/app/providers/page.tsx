@@ -1,14 +1,16 @@
+import type { Metadata } from 'next';
 import { ProviderDirectory } from '@/components/provider-directory';
 import { getProviders, getServiceCategories } from '@/lib/data';
 
 type ProvidersPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     q?: string;
     location?: string;
-  };
+  }>;
 };
 
 export default async function ProvidersPage({ searchParams }: ProvidersPageProps) {
+  const params = (await searchParams) ?? {};
   const [providers, services] = await Promise.all([getProviders(), getServiceCategories()]);
   const serviceNamesBySlug = Object.fromEntries(services.map((service) => [service.slug, service.name]));
 
@@ -26,10 +28,15 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
         serviceNamesBySlug={serviceNamesBySlug}
         withSearch
         searchPlaceholder="Search providers by name, service, location, or bio"
-        initialQuery={searchParams?.q ?? ''}
-        initialLocation={searchParams?.location ?? ''}
+        initialQuery={params.q ?? ''}
+        initialLocation={params.location ?? ''}
         showSuggestions
       />
     </div>
   );
 }
+
+export const metadata: Metadata = {
+  title: 'Providers | I Kali',
+  description: 'Browse verified local professionals across Nairobi and filter by area, rating, and service.'
+};

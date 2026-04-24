@@ -1,20 +1,23 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ProviderDirectory } from '@/components/provider-directory';
 import { getProvidersByServiceSlug, getServiceBySlug, getServiceCategories } from '@/lib/data';
 
 type ServiceDetailsPageProps = {
-  params: { slug: string };
-  searchParams?: {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{
     location?: string;
     q?: string;
-  };
+  }>;
 };
 
 export default async function ServiceDetailsPage({ params, searchParams }: ServiceDetailsPageProps) {
+  const routeParams = await params;
+  const queryParams = (await searchParams) ?? {};
   const [service, serviceProviders, services] = await Promise.all([
-    getServiceBySlug(params.slug),
-    getProvidersByServiceSlug(params.slug),
+    getServiceBySlug(routeParams.slug),
+    getProvidersByServiceSlug(routeParams.slug),
     getServiceCategories()
   ]);
 
@@ -49,10 +52,26 @@ export default async function ServiceDetailsPage({ params, searchParams }: Servi
         serviceNamesBySlug={serviceNamesBySlug}
         withSearch
         searchPlaceholder={`Search ${service.name.toLowerCase()} providers by name, area, or bio`}
-        initialQuery={searchParams?.q ?? ''}
-        initialLocation={searchParams?.location ?? ''}
+        initialQuery={queryParams.q ?? ''}
+        initialLocation={queryParams.location ?? ''}
         showSuggestions
       />
     </div>
   );
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const routeParams = await params;
+  const service = await getServiceBySlug(routeParams.slug);
+  if (!service) {
+    return {
+      title: 'Service not found | I Kali',
+      description: 'This service category is unavailable.'
+    };
+  }
+
+  return {
+    title: `${service.name} Services in Nairobi | I Kali`,
+    description: `Find trusted ${service.name.toLowerCase()} professionals in Nairobi, compare providers, and request service safely.`
+  };
 }

@@ -1,3 +1,10 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Trust & Safety | I Kali',
+  description: 'Learn how I Kali approaches verification, review signals, and safer customer-provider interactions.'
+};
+
 export default function TrustPage() {
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">

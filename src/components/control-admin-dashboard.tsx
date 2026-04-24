@@ -430,6 +430,13 @@ export function ControlAdminDashboard() {
         </button>
       </div>
 
+      <section className="card border-amber-300 bg-amber-50 p-4">
+        <h2 className="text-sm font-semibold text-amber-900">Security warning</h2>
+        <p className="mt-1 text-sm text-amber-800">
+          /control is an internal MVP tool and is not protected yet. Do not deploy without authentication and role-based access controls.
+        </p>
+      </section>
+
       {!supabaseReady && <p className="card border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">Supabase not reachable. Admin sections are in empty-state mode.</p>}
       {error && <p className="card border-rose-300 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
       {successMessage && <p className="card border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700">{successMessage}</p>}
