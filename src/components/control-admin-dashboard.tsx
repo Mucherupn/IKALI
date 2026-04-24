@@ -114,6 +114,15 @@ function toStoredStatus(value: BookingDisplayStatus, currentStatus: string): Sto
   return value;
 }
 
+function getPaymentDisplay(request: JobRequestRow) {
+  const status = request.payment_status?.trim() || 'Not paid';
+  const amount = typeof request.payment_amount === 'number' ? `KES ${request.payment_amount.toLocaleString()}` : 'Not paid';
+  const type = request.payment_type?.trim() || 'Not paid';
+  const reference = request.payment_reference?.trim() || 'Not paid';
+
+  return { status, amount, type, reference };
+}
+
 export function ControlAdminDashboard() {
   const [activeTab, setActiveTab] = useState<AdminTab>('providers');
   const [loading, setLoading] = useState(true);
@@ -836,6 +845,17 @@ export function ControlAdminDashboard() {
                         <td className="px-3 py-3">{request.location}</td>
                         <td className="px-3 py-3">{request.urgency ?? 'standard'}</td>
                         <td className="px-3 py-3">
+                          {(() => {
+                            const payment = getPaymentDisplay(request);
+                            return (
+                              <div className="mb-2 text-xs text-slate-600">
+                                <p>Payment status: {payment.status}</p>
+                                <p>Amount: {payment.amount}</p>
+                                <p>Type: {payment.type}</p>
+                                <p>Reference: {payment.reference}</p>
+                              </div>
+                            );
+                          })()}
                           <select
                             value={toDisplayStatus(request.status)}
                             onChange={(event) => updateRequestStatus(request.id, event.target.value as BookingDisplayStatus, request.status)}
@@ -866,6 +886,17 @@ export function ControlAdminDashboard() {
                     <p className="mt-1 text-xs text-slate-600">Date/time: {request.preferred_date ?? 'No date'} · {request.preferred_time ?? 'No time'}</p>
                     <p className="mt-1 text-xs text-slate-600">Location: {request.location}</p>
                     <p className="mt-1 text-xs text-slate-600">Urgency: {request.urgency ?? 'standard'}</p>
+                    {(() => {
+                      const payment = getPaymentDisplay(request);
+                      return (
+                        <>
+                          <p className="mt-1 text-xs text-slate-600">Payment status: {payment.status}</p>
+                          <p className="mt-1 text-xs text-slate-600">Payment amount: {payment.amount}</p>
+                          <p className="mt-1 text-xs text-slate-600">Payment type: {payment.type}</p>
+                          <p className="mt-1 text-xs text-slate-600">Payment reference: {payment.reference}</p>
+                        </>
+                      );
+                    })()}
                     <p className="mt-2 text-xs text-slate-500">{request.description?.trim() || 'No description provided'}</p>
                     <div className="mt-3">
                       <select

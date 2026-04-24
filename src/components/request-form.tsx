@@ -159,6 +159,9 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
             Your booking request has been received. An I Kali professional will contact you shortly to confirm availability.
           </p>
           <p className="mt-2 text-sm text-slate-600">We will review your request and connect you with the right professional.</p>
+          <p className="mt-2 text-sm text-slate-600">
+            Payment is not required yet. An I Kali representative will confirm the job details before any payment is requested.
+          </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Link href="/" className="focus-ring rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-800">
               Back to Home
