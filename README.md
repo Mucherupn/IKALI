@@ -75,6 +75,11 @@ npm install
 npm run dev
 ```
 
+For local auth testing, disable email confirmation in Supabase:
+
+- Supabase Dashboard → Authentication → Providers → Email → `Confirm email = OFF`
+- After changing this setting, test signup with a fresh email address.
+
 Quality checks:
 
 ```bash

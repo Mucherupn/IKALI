@@ -12,10 +12,12 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 function toLoginErrorMessage(message: string) {
   const normalized = message.toLowerCase();
 
+  if (normalized.includes('email not confirmed') || normalized.includes('email_not_confirmed')) {
+    return 'Your account exists, but Supabase still requires email confirmation. Disable Confirm email in Supabase Authentication settings or confirm this user manually.';
+  }
+
   if (
     normalized.includes('invalid login credentials') ||
-    normalized.includes('email not confirmed') ||
-    normalized.includes('email_not_confirmed') ||
     normalized.includes('invalid_credentials')
   ) {
     return 'Invalid email or password.';
