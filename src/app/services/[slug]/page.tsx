@@ -33,30 +33,18 @@ export default async function ServiceDetailsPage({ params, searchParams }: Servi
       </Link>
 
       <header className="mt-4">
-        <h1 className="text-3xl font-bold text-slate-900">{service.name} Services in Nairobi</h1>
-        <p className="mt-2 max-w-3xl text-slate-600">
-          Browse available {service.name.toLowerCase()} professionals, compare ratings, and contact the right provider for your
-          project in minutes.
-        </p>
-        <div className="mt-5">
-          <Link
-            href={`/request?service=${service.slug}`}
-            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-[#D71920] px-5 py-3 text-sm font-semibold text-white hover:bg-[#A80F1A]"
-          >
-            Request this service
-          </Link>
-        </div>
+        <h1 className="text-3xl font-bold text-slate-900">{service.name} near you</h1>
+        <p className="mt-2 max-w-3xl text-slate-600">Compare available providers, ratings and service areas.</p>
       </header>
 
       <ProviderDirectory
         providers={serviceProviders}
         serviceNamesBySlug={serviceNamesBySlug}
-        withSearch
-        searchPlaceholder={`Search ${service.name.toLowerCase()} providers by name, area, or bio`}
+        mode="service-results"
+        withSearch={false}
         initialQuery={queryParams.q ?? ''}
         initialLocation={queryParams.location ?? ''}
         initialNearMe={queryParams.nearMe === '1'}
-        showSuggestions
       />
     </div>
   );
@@ -73,7 +61,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 
   return {
-    title: `${service.name} Services in Nairobi | I Kali`,
-    description: `Find trusted ${service.name.toLowerCase()} professionals in Nairobi, compare providers, and request service safely.`
+    title: `${service.name} near you | I Kali`,
+    description: `Find trusted ${service.name.toLowerCase()} professionals in your area, compare providers, and request service safely.`
   };
 }

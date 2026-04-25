@@ -5,7 +5,7 @@ import { getProviders, getServiceCategories } from '@/lib/data';
 
 export const metadata: Metadata = {
   title: 'Services | I Kali',
-  description: 'Browse trusted local service categories in Nairobi and request help in minutes.'
+  description: 'Browse trusted local service categories across Kenya and request help in minutes.'
 };
 
 export default async function ServicesPage() {
@@ -20,7 +20,7 @@ export default async function ServicesPage() {
       <header className="card-premium p-6 sm:p-8">
         <p className="eyebrow">Service discovery</p>
         <h1 className="page-title mt-2">Browse Services</h1>
-        <p className="mt-3 max-w-2xl muted-text">Discover trusted professionals across Nairobi. Pick a category, compare providers, and request help in minutes.</p>
+        <p className="mt-3 max-w-2xl muted-text">Discover trusted local professionals across Kenya. Pick a category, compare providers, and request help in minutes.</p>
       </header>
 
       {services.length > 0 ? (

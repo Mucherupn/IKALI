@@ -3,8 +3,9 @@ import Link from 'next/link';
 import { TrustPill } from '@/components/trust-pill';
 import { Provider } from '@/lib/types';
 
-export function ProviderCard({ provider, serviceName }: { provider: Provider; serviceName?: string }) {
+export function ProviderCard({ provider, serviceName, distanceKm }: { provider: Provider; serviceName?: string; distanceKm?: number }) {
   const reviewCount = provider.reviewCount ?? provider.reviews;
+  const distanceLabel = typeof distanceKm === 'number' && Number.isFinite(distanceKm) ? `${distanceKm.toFixed(1)} km away` : null;
 
   return (
     <article className="card flex h-full flex-col overflow-hidden">
@@ -21,8 +22,17 @@ export function ProviderCard({ provider, serviceName }: { provider: Provider; se
           <TrustPill label={provider.verified ? 'Verified' : 'Verification pending'} tone={provider.verified ? 'verified' : 'pending'} />
         </div>
 
-        <p className="mt-3 text-sm text-slate-600">{provider.location}</p>
-        <p className="mt-3 text-sm leading-6 text-slate-700">{provider.bio}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+          <span>{provider.location}</span>
+          {distanceLabel ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{distanceLabel}</span> : null}
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-700">
+          <span className="rounded-lg bg-slate-100 px-2.5 py-2">⭐ {provider.rating.toFixed(1)}</span>
+          <span className="rounded-lg bg-slate-100 px-2.5 py-2">{provider.completedJobs} jobs</span>
+          <span className="rounded-lg bg-slate-100 px-2.5 py-2">{reviewCount} reviews</span>
+          <span className="rounded-lg bg-slate-100 px-2.5 py-2">{provider.isAvailable === false ? 'Currently unavailable' : provider.availability}</span>
+        </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
           <TrustPill
@@ -30,13 +40,6 @@ export function ProviderCard({ provider, serviceName }: { provider: Provider; se
             tone={provider.phoneVerified ? 'neutral' : 'pending'}
           />
           <TrustPill label={provider.responseTime ?? 'Response time being verified'} tone="neutral" />
-        </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-700">
-          <span className="rounded-lg bg-slate-100 px-2.5 py-2">⭐ {provider.rating.toFixed(1)}</span>
-          <span className="rounded-lg bg-slate-100 px-2.5 py-2">{reviewCount} reviews</span>
-          <span className="rounded-lg bg-slate-100 px-2.5 py-2">{provider.completedJobs} jobs</span>
-          {provider.priceGuide ? <span className="rounded-lg bg-slate-100 px-2.5 py-2">{provider.priceGuide}</span> : null}
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-3">

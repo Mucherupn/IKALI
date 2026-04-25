@@ -31,6 +31,7 @@ export type Provider = {
   reviewCount?: number;
   latitude?: number;
   longitude?: number;
+  isAvailable?: boolean;
 };
 
 export type ProviderReview = {

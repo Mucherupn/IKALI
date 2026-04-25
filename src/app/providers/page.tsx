@@ -27,7 +27,7 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
         initialQuery={params.q ?? ''}
         initialLocation={params.location ?? ''}
         initialNearMe={params.nearMe === '1'}
-        showSuggestions
+        mode="general-directory"
       />
     </div>
   );
@@ -35,5 +35,5 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
 
 export const metadata: Metadata = {
   title: 'Providers | I Kali',
-  description: 'Browse verified local professionals across Nairobi and filter by area, rating, and service.'
+  description: 'Browse verified local professionals across Kenya and filter by area, rating, and service.'
 };

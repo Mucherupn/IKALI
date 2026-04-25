@@ -2,76 +2,71 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { LocationAutocomplete } from '@/components/location-autocomplete';
 import { ProviderCard } from '@/components/provider-card';
-import { POPULAR_LOCATIONS, SUGGESTED_SEARCHES, extractSearchIntent, matchesProviderSearch } from '@/lib/search';
+import {
+  calculateDistanceKm,
+  getFallbackNearbyAreas,
+  getNearestProviders,
+  normalizeLocationName,
+  sortProvidersByDistance,
+  type Coordinates
+} from '@/lib/location';
+import { extractSearchIntent, matchesProviderSearch } from '@/lib/search';
 import { Provider } from '@/lib/types';
+
+type DirectoryMode = 'service-results' | 'general-directory';
+type SortOption = 'recommended' | 'highest-rated' | 'most-completed-jobs' | 'nearest-first';
 
 type ProviderDirectoryProps = {
   providers: Provider[];
   serviceNamesBySlug?: Record<string, string>;
+  mode?: DirectoryMode;
   withSearch?: boolean;
   searchPlaceholder?: string;
   initialQuery?: string;
   initialLocation?: string;
   initialNearMe?: boolean;
-  showSuggestions?: boolean;
-};
-
-const LOCATION_SUGGESTIONS = ['Karen', 'Kilimani', 'Westlands', 'Kileleshwa', 'Langata', 'Rongai'] as const;
-const NEARBY_AREA_MAP: Record<string, string[]> = {
-  karen: ['langata', 'rongai', 'kileleshwa'],
-  kilimani: ['kileleshwa', 'lavington', 'westlands'],
-  westlands: ['kileleshwa', 'lavington', 'kilimani'],
-  kileleshwa: ['kilimani', 'lavington', 'westlands'],
-  lavington: ['kileleshwa', 'kilimani', 'westlands'],
-  langata: ['karen', 'rongai', 'south b'],
-  rongai: ['langata', 'karen'],
-  runda: ['westlands', 'kileleshwa'],
-  'south b': ['embakasi', 'langata'],
-  embakasi: ['south b', 'langata']
 };
 
 export function ProviderDirectory({
   providers,
   serviceNamesBySlug,
+  mode = 'general-directory',
   withSearch = true,
   searchPlaceholder = 'Search by name, service, or location',
   initialQuery = '',
   initialLocation = '',
-  initialNearMe = false,
-  showSuggestions = false
+  initialNearMe = false
 }: ProviderDirectoryProps) {
   const intent = extractSearchIntent(initialQuery);
   const [query, setQuery] = useState(initialQuery);
   const [selectedLocation, setSelectedLocation] = useState(initialLocation || intent.locationQuery || '');
   const [minimumRating, setMinimumRating] = useState('all');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [availableOnly, setAvailableOnly] = useState(mode === 'service-results');
+  const [sortOption, setSortOption] = useState<SortOption>('recommended');
+  const [userCoords, setUserCoords] = useState<Coordinates | null>(null);
   const [geoDenied, setGeoDenied] = useState(false);
   const hasRequestedGeolocation = useRef(false);
   const isNearMeSearch = initialNearMe || extractSearchIntent(query).nearMe;
+  const isServiceResults = mode === 'service-results';
 
   useEffect(() => {
     const storedCoordinates = sessionStorage.getItem('userLocationCoords');
+    if (!storedCoordinates) return;
 
-    if (storedCoordinates) {
-      try {
-        const parsed = JSON.parse(storedCoordinates) as { latitude?: number; longitude?: number };
-
-        if (typeof parsed.latitude === 'number' && typeof parsed.longitude === 'number') {
-          setUserCoords({ latitude: parsed.latitude, longitude: parsed.longitude });
-        }
-      } catch {
-        sessionStorage.removeItem('userLocationCoords');
+    try {
+      const parsed = JSON.parse(storedCoordinates) as Coordinates;
+      if (typeof parsed.latitude === 'number' && typeof parsed.longitude === 'number') {
+        setUserCoords({ latitude: parsed.latitude, longitude: parsed.longitude });
       }
+    } catch {
+      sessionStorage.removeItem('userLocationCoords');
     }
   }, []);
 
-  useEffect(() => {
-    if (!isNearMeSearch || userCoords || hasRequestedGeolocation.current) return;
-
-    hasRequestedGeolocation.current = true;
-
+  const requestBrowserLocation = () => {
     if (!navigator.geolocation) {
       setGeoDenied(true);
       return;
@@ -87,103 +82,157 @@ export function ProviderDirectory({
         setUserCoords(coordinates);
         sessionStorage.setItem('userLocationCoords', JSON.stringify(coordinates));
         setGeoDenied(false);
+        hasRequestedGeolocation.current = true;
       },
       () => {
         setGeoDenied(true);
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
+  };
+
+  useEffect(() => {
+    if (!isNearMeSearch || userCoords || hasRequestedGeolocation.current) return;
+    hasRequestedGeolocation.current = true;
+    requestBrowserLocation();
   }, [isNearMeSearch, userCoords]);
 
-  const matchingLocationSuggestions = useMemo(() => {
-    const normalized = selectedLocation.trim().toLowerCase();
-
-    if (!normalized) return [];
-
-    return LOCATION_SUGGESTIONS.filter((location) => location.toLowerCase().includes(normalized)).slice(0, 6);
-  }, [selectedLocation]);
-
-  const { filteredProviders, isLocationFallbackActive } = useMemo(() => {
+  const { displayedProviders, notice, summary } = useMemo(() => {
     const parsedQuery = extractSearchIntent(query);
-    const normalizedLocationSearch = (selectedLocation || parsedQuery.locationQuery).trim().toLowerCase();
-    const filterByDistance = (parsedQuery.nearMe || initialNearMe) && userCoords;
+    const normalizedLocationSearch = normalizeLocationName(selectedLocation || parsedQuery.locationQuery);
 
-    const queryFilteredProviders = providers.filter((provider) => {
-      const serviceName = serviceNamesBySlug?.[provider.serviceCategory] ?? provider.serviceCategory;
-      const matchesQuery = matchesProviderSearch(provider, serviceName, parsedQuery.serviceQuery || query);
+    let scopedProviders = providers;
 
+    if (!isServiceResults && withSearch && query.trim()) {
+      scopedProviders = scopedProviders.filter((provider) => {
+        const serviceName = serviceNamesBySlug?.[provider.serviceCategory] ?? provider.serviceCategory;
+        return matchesProviderSearch(provider, serviceName, parsedQuery.serviceQuery || query);
+      });
+    }
+
+    const filteredByMeta = scopedProviders.filter((provider) => {
       const matchesRating = minimumRating === 'all' || provider.rating >= Number(minimumRating);
       const matchesVerification = !verifiedOnly || provider.verified;
-      const matchesDistance =
-        !filterByDistance ||
-        provider.latitude === undefined ||
-        provider.longitude === undefined ||
-        getDistanceInKm(userCoords.latitude, userCoords.longitude, provider.latitude, provider.longitude) <= 20;
-
-      return matchesQuery && matchesRating && matchesVerification && matchesDistance;
+      const matchesAvailability = !availableOnly || provider.isAvailable !== false;
+      return matchesRating && matchesVerification && matchesAvailability;
     });
 
-    const providersInSelectedLocation = normalizedLocationSearch
-      ? queryFilteredProviders.filter((provider) => provider.location.toLowerCase().includes(normalizedLocationSearch))
-      : queryFilteredProviders;
-
-    const sortByDistanceIfPossible = (items: Provider[]) => {
-      if (!userCoords) return items;
-
-      return [...items].sort((providerA, providerB) => {
-        const distanceA =
-          providerA.latitude !== undefined && providerA.longitude !== undefined
-            ? getDistanceInKm(userCoords.latitude, userCoords.longitude, providerA.latitude, providerA.longitude)
-            : Number.POSITIVE_INFINITY;
-        const distanceB =
-          providerB.latitude !== undefined && providerB.longitude !== undefined
-            ? getDistanceInKm(userCoords.latitude, userCoords.longitude, providerB.latitude, providerB.longitude)
-            : Number.POSITIVE_INFINITY;
-
-        return distanceA - distanceB;
+    const recommendedSort = (items: Provider[]) => {
+      return [...items].sort((a, b) => {
+        const availableScoreA = a.isAvailable === false ? 0 : 1;
+        const availableScoreB = b.isAvailable === false ? 0 : 1;
+        if (availableScoreA !== availableScoreB) return availableScoreB - availableScoreA;
+        if (a.verified !== b.verified) return Number(b.verified) - Number(a.verified);
+        if (a.rating !== b.rating) return b.rating - a.rating;
+        return b.completedJobs - a.completedJobs;
       });
     };
 
-    if (providersInSelectedLocation.length > 0 || !normalizedLocationSearch) {
+    const applySort = (items: Provider[]) => {
+      if (sortOption === 'highest-rated') return [...items].sort((a, b) => b.rating - a.rating || b.completedJobs - a.completedJobs);
+      if (sortOption === 'most-completed-jobs') return [...items].sort((a, b) => b.completedJobs - a.completedJobs || b.rating - a.rating);
+      if (sortOption === 'nearest-first' && userCoords) return sortProvidersByDistance(items, userCoords);
+      return recommendedSort(items);
+    };
+
+    const sortedPool = applySort(filteredByMeta);
+
+    if (sortedPool.length === 0) {
       return {
-        filteredProviders: sortByDistanceIfPossible(providersInSelectedLocation),
-        isLocationFallbackActive: false
+        displayedProviders: [] as Provider[],
+        notice: providers.length === 0 ? null : undefined,
+        summary: providers.length === 0 ? 'No providers available yet for this service.' : 'No providers match your filters yet.'
       };
     }
+
+    if (!normalizedLocationSearch && !(sortOption === 'nearest-first' && userCoords)) {
+      return {
+        displayedProviders: sortedPool,
+        notice: null,
+        summary: `Showing ${isServiceResults ? 'available providers' : 'providers'}${sortOption === 'highest-rated' ? ' by highest rating' : ''}${sortOption === 'most-completed-jobs' ? ' by completed jobs' : ''}.`
+      };
+    }
+
+    const exactMatches = normalizedLocationSearch
+      ? sortedPool.filter((provider) => normalizeLocationName(provider.location).includes(normalizedLocationSearch))
+      : [];
+
+    if (normalizedLocationSearch && exactMatches.length > 0) {
+      const otherProviders = sortedPool.filter((provider) => !exactMatches.includes(provider));
+      return {
+        displayedProviders: [...exactMatches, ...otherProviders],
+        notice: null,
+        summary: `Showing ${exactMatches.length} matching ${exactMatches.length === 1 ? 'provider' : 'providers'} near ${selectedLocation}.`
+      };
+    }
+
+    const locationLabel = selectedLocation || 'your area';
 
     if (userCoords) {
+      const nearestProviders = getNearestProviders(sortedPool, userCoords, sortedPool.length).filter((provider) => {
+        if (provider.latitude === undefined || provider.longitude === undefined) return false;
+        return calculateDistanceKm(userCoords.latitude, userCoords.longitude, provider.latitude, provider.longitude) <= 40;
+      });
+
+      if (nearestProviders.length > 0) {
+        return {
+          displayedProviders: nearestProviders,
+          notice: `No matching professionals found in this area. Showing the nearest available providers.`,
+          summary: `Showing nearest ${isServiceResults ? 'providers' : 'professionals'} near ${locationLabel}.`
+        };
+      }
+    }
+
+    if (normalizedLocationSearch) {
+      const nearbyAreas = getFallbackNearbyAreas(normalizedLocationSearch);
+      const nearbyProviders = sortedPool.filter((provider) => {
+        const providerLocation = normalizeLocationName(provider.location);
+        return nearbyAreas.some((area) => providerLocation.includes(area));
+      });
+
+      if (nearbyProviders.length > 0) {
+        return {
+          displayedProviders: applySort(nearbyProviders),
+          notice: `No matching professionals found in this area. Showing the nearest available providers.`,
+          summary: `Showing nearby ${isServiceResults ? 'providers' : 'professionals'} around ${locationLabel}.`
+        };
+      }
+    }
+
+    const topRated = [...sortedPool].sort((a, b) => b.rating - a.rating || b.completedJobs - a.completedJobs);
+
+    if (topRated.length > 0) {
       return {
-        filteredProviders: sortByDistanceIfPossible(queryFilteredProviders),
-        isLocationFallbackActive: queryFilteredProviders.length > 0
+        displayedProviders: topRated,
+        notice: 'No nearby providers found yet. Showing top-rated providers for this service.',
+        summary: `Showing highest-rated ${isServiceResults ? 'providers' : 'professionals'}${normalizedLocationSearch ? ` near ${locationLabel}` : ''}.`
       };
     }
 
-    const nearbyAreas = NEARBY_AREA_MAP[normalizedLocationSearch] ?? [];
-    const nearbyProviders = queryFilteredProviders.filter((provider) => {
-      const providerLocation = provider.location.toLowerCase();
-      return nearbyAreas.some((area) => providerLocation.includes(area));
-    });
-
     return {
-      filteredProviders: nearbyProviders,
-      isLocationFallbackActive: nearbyProviders.length > 0
+      displayedProviders: [] as Provider[],
+      notice: undefined,
+      summary: 'No providers match your filters yet.'
     };
-  }, [initialNearMe, minimumRating, providers, query, selectedLocation, serviceNamesBySlug, userCoords, verifiedOnly]);
+  }, [availableOnly, isServiceResults, minimumRating, providers, query, selectedLocation, serviceNamesBySlug, sortOption, userCoords, verifiedOnly, withSearch]);
 
   const clearFilters = () => {
     setQuery('');
     setSelectedLocation('');
     setMinimumRating('all');
     setVerifiedOnly(false);
+    setAvailableOnly(isServiceResults);
+    setSortOption('recommended');
+    setGeoDenied(false);
   };
 
   const noProvidersAvailable = providers.length === 0;
 
   return (
-    <div className="mt-6 space-y-6">
+    <div className="mt-6 space-y-5">
       <section className="card p-4 sm:p-5">
-        <div className="grid gap-3 md:grid-cols-4">
-          {withSearch ? (
+        <div className={`grid gap-3 ${withSearch && !isServiceResults ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+          {withSearch && !isServiceResults ? (
             <label className="md:col-span-2">
               <span className="mb-1.5 block text-sm font-medium text-slate-700">Search</span>
               <input
@@ -196,34 +245,18 @@ export function ProviderDirectory({
             </label>
           ) : null}
 
-          <div>
-            <label htmlFor="location-filter" className="mb-1.5 block text-sm font-medium text-slate-700">
-              Location
-            </label>
-            <input
-              id="location-filter"
-              type="text"
+          <label className={withSearch && !isServiceResults ? '' : 'md:col-span-1'}>
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">Location</span>
+            <LocationAutocomplete
               value={selectedLocation}
-              onChange={(event) => setSelectedLocation(event.target.value)}
-              placeholder="Type location e.g. Karen"
+              onChange={setSelectedLocation}
+              onPlaceSelect={(place) => {
+                setSelectedLocation(place.name);
+              }}
+              placeholder="Enter your area"
               className="focus-ring w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
-              autoComplete="off"
             />
-            {matchingLocationSuggestions.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {matchingLocationSuggestions.map((location) => (
-                  <button
-                    key={location}
-                    type="button"
-                    onClick={() => setSelectedLocation(location)}
-                    className="focus-ring rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
-                  >
-                    {location}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
+          </label>
 
           <label>
             <span className="mb-1.5 block text-sm font-medium text-slate-700">Rating</span>
@@ -237,18 +270,50 @@ export function ProviderDirectory({
               <option value="4.5">4.5+ stars</option>
             </select>
           </label>
+
+          <label>
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">Sort</span>
+            <select
+              value={sortOption}
+              onChange={(event) => setSortOption(event.target.value as SortOption)}
+              className="focus-ring w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
+            >
+              <option value="recommended">Recommended</option>
+              <option value="highest-rated">Highest rated</option>
+              <option value="most-completed-jobs">Most completed jobs</option>
+              <option value="nearest-first">Nearest first</option>
+            </select>
+          </label>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={verifiedOnly}
-              onChange={(event) => setVerifiedOnly(event.target.checked)}
-              className="focus-ring h-4 w-4 rounded border-slate-300"
-            />
-            Verified providers only
-          </label>
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={verifiedOnly}
+                onChange={(event) => setVerifiedOnly(event.target.checked)}
+                className="focus-ring h-4 w-4 rounded border-slate-300"
+              />
+              Verified only
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={availableOnly}
+                onChange={(event) => setAvailableOnly(event.target.checked)}
+                className="focus-ring h-4 w-4 rounded border-slate-300"
+              />
+              Availability only
+            </label>
+            <button
+              type="button"
+              onClick={requestBrowserLocation}
+              className="focus-ring rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Use my location
+            </button>
+          </div>
 
           <button
             type="button"
@@ -259,54 +324,40 @@ export function ProviderDirectory({
           </button>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Popular locations</span>
-          {POPULAR_LOCATIONS.map((location) => (
-            <button
-              key={location}
-              type="button"
-              onClick={() => setSelectedLocation(location)}
-              className="focus-ring rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
-            >
-              {location}
-            </button>
-          ))}
-        </div>
-
-        {showSuggestions ? (
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Suggested searches</span>
-            {SUGGESTED_SEARCHES.map((suggestion) => (
-              <button
-                key={suggestion}
-                type="button"
-                onClick={() => setQuery(suggestion)}
-                className="focus-ring rounded-full border border-[#fecdd3] bg-[#fff1f2] px-3 py-1 text-xs text-[#7f1d1d] hover:bg-[#ffe4e6]"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        ) : null}
-        {isNearMeSearch && geoDenied ? <p className="mt-3 text-sm text-[#D71920]">Please type your location manually</p> : null}
-        {isLocationFallbackActive ? <p className="mt-3 text-sm text-[#D71920]">No providers found here. Showing nearest providers.</p> : null}
+        {geoDenied ? <p className="mt-3 text-sm text-[#D71920]">Please type your area instead.</p> : null}
       </section>
 
-      {filteredProviders.length > 0 ? (
+      <p className="text-sm text-slate-600">{summary}</p>
+
+      {notice ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{notice}</div> : null}
+
+      {displayedProviders.length > 0 ? (
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {filteredProviders.map((provider) => (
-            <ProviderCard key={provider.id} provider={provider} serviceName={serviceNamesBySlug?.[provider.serviceCategory]} />
-          ))}
+          {displayedProviders.map((provider) => {
+            const distanceKm =
+              userCoords && provider.latitude !== undefined && provider.longitude !== undefined
+                ? calculateDistanceKm(userCoords.latitude, userCoords.longitude, provider.latitude, provider.longitude)
+                : undefined;
+
+            return (
+              <ProviderCard
+                key={provider.id}
+                provider={provider}
+                serviceName={serviceNamesBySlug?.[provider.serviceCategory]}
+                distanceKm={distanceKm}
+              />
+            );
+          })}
         </div>
       ) : (
         <section className="card px-6 py-10 text-center">
           <h3 className="text-lg font-semibold text-slate-900">
-            {noProvidersAvailable ? 'No providers listed yet.' : 'No matching professionals found yet.'}
+            {noProvidersAvailable ? 'No providers are currently listed for this service.' : 'No matching professionals found yet.'}
           </h3>
           <p className="mt-2 text-sm text-slate-600">
             {noProvidersAvailable
-              ? 'Provider data is currently unavailable. You can still submit a request and our team will follow up.'
-              : 'Try adjusting your search or request this service and we will source one for you.'}
+              ? 'Request this service and we will notify you when local professionals become available.'
+              : 'Try adjusting your filters or request this service and we will source one for you.'}
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             <button
@@ -327,23 +378,4 @@ export function ProviderDirectory({
       )}
     </div>
   );
-}
-
-function getDistanceInKm(fromLatitude: number, fromLongitude: number, toLatitude: number, toLongitude: number) {
-  const earthRadiusKm = 6371;
-  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
-
-  const latitudeDelta = toRadians(toLatitude - fromLatitude);
-  const longitudeDelta = toRadians(toLongitude - fromLongitude);
-
-  const a =
-    Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2) +
-    Math.cos(toRadians(fromLatitude)) *
-      Math.cos(toRadians(toLatitude)) *
-      Math.sin(longitudeDelta / 2) *
-      Math.sin(longitudeDelta / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return earthRadiusKm * c;
 }

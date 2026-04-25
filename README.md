@@ -1,6 +1,6 @@
 # I Kali (Internet Jua Kali)
 
-I Kali is a Nairobi-focused local services marketplace MVP that helps customers discover trusted professionals, compare profiles, and submit service requests quickly.
+I Kali is a Kenya-wide local services marketplace MVP that helps customers discover trusted professionals, compare profiles, and submit service requests quickly.
 
 This Phase 11 pass focuses on **stability, safety, mobile UX, and production readiness** for founder-led testing.
 
