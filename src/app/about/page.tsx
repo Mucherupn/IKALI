@@ -6,7 +6,7 @@ export default function AboutPage() {
       <header className="card-premium p-6 sm:p-8">
         <p className="eyebrow">About I Kali</p>
         <h1 className="page-title mt-2">Kenya&apos;s premium marketplace for trusted local services.</h1>
-        <p className="mt-3 muted-text">I Kali (Internet Jua Kali) connects households and businesses with vetted professionals in Nairobi through a modern, trust-first platform.</p>
+        <p className="mt-3 muted-text">I Kali (Internet Jua Kali) connects households and businesses with vetted professionals across Kenya through a modern, trust-first platform.</p>
       </header>
       <section className="card-premium p-6 text-sm leading-7 text-gray-700 sm:text-base">
         <p>Our focus is quality discovery, clear trust indicators, and reliable request workflows that make service booking feel simple and safe.</p>

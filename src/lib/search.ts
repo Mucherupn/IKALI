@@ -18,7 +18,7 @@ export const SUGGESTED_SEARCHES = [
   'Electrician in Kilimani',
   'Cleaner in Westlands',
   'Mechanic in Langata',
-  'Barber in Nairobi',
+  'Barber near you',
   'Fundi in Rongai'
 ] as const;
 

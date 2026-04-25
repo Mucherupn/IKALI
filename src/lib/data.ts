@@ -40,6 +40,7 @@ function normalizeProvider(provider: {
   reviews: number;
   latitude?: number | null;
   longitude?: number | null;
+  is_available?: boolean | null;
 }): Provider {
   return {
     id: provider.id,
@@ -62,6 +63,7 @@ function normalizeProvider(provider: {
     reviewCount: provider.reviews,
     latitude: provider.latitude ?? undefined,
     longitude: provider.longitude ?? undefined,
+    isAvailable: provider.is_available ?? undefined,
     phoneVerified: provider.is_verified,
     experienceChecked: provider.years_experience > 0,
     workHistoryReviewed: provider.completed_jobs > 0,
@@ -95,9 +97,7 @@ export async function getProviders(): Promise<Provider[]> {
     const [{ data: providerRows, error: providersError }, { data: providerServiceRows, error: providerServicesError }, { data: categoriesRows }] = await Promise.all([
       supabase
         .from('providers')
-        .select(
-          'id, slug, full_name, profile_image_url, location, bio, years_experience, is_verified, rating, completed_jobs, price_guide, phone, whatsapp, availability_text'
-        )
+        .select('*')
         .order('rating', { ascending: false }),
       supabase
         .from('provider_services')
