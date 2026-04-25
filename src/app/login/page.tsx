@@ -5,18 +5,20 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import { ensureCustomerProfile, getCurrentProfile, getRedirectForProfile } from '@/lib/auth';
 import { getSupabaseClient, getSupabaseConfigError } from '@/lib/supabase';
+import { isValidEmail, normalizeEmail } from '@/lib/validation';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
 function toLoginErrorMessage(message: string) {
   const normalized = message.toLowerCase();
 
-  if (normalized.includes('email not confirmed') || normalized.includes('email_not_confirmed')) {
-    return 'Please confirm your email address before signing in. Check your inbox for the confirmation link.';
-  }
-
-  if (normalized.includes('invalid login credentials')) {
-    return 'Invalid email or password. Please try again.';
+  if (
+    normalized.includes('invalid login credentials') ||
+    normalized.includes('email not confirmed') ||
+    normalized.includes('email_not_confirmed') ||
+    normalized.includes('invalid_credentials')
+  ) {
+    return 'Invalid email or password.';
   }
 
   return 'Unable to sign in right now. Please try again.';
@@ -31,14 +33,36 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage('');
+    setEmailError('');
+    setPasswordError('');
 
     if (configError) {
       setErrorMessage('Authentication is unavailable due to missing Supabase configuration.');
+      return;
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    let hasError = false;
+
+    if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
+      setEmailError('Enter a valid email address.');
+      hasError = true;
+    }
+
+    if (!password) {
+      setPasswordError('Password is required.');
+      hasError = true;
+    }
+
+    if (hasError) {
+      setErrorMessage('Please fix the highlighted fields.');
       return;
     }
 
@@ -47,7 +71,7 @@ export default function LoginPage() {
     try {
       const supabase = getSupabaseClient();
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: normalizedEmail,
         password
       });
 
@@ -66,7 +90,7 @@ export default function LoginPage() {
 
       let profile = await getCurrentProfile(data.user.id);
       if (!profile) {
-        const ensured = await ensureCustomerProfile(data.user, { email: email.trim() });
+        const ensured = await ensureCustomerProfile(data.user, { email: normalizedEmail });
         if (ensured.error) {
           if (isDevelopment) {
             console.error('Login profile ensure error', ensured.error);
@@ -109,6 +133,7 @@ export default function LoginPage() {
               className="focus-ring input-field"
               placeholder="you@example.com"
             />
+            {emailError ? <p className="mt-1 text-xs text-red-600">{emailError}</p> : null}
           </label>
 
           <label className="block">
@@ -116,12 +141,12 @@ export default function LoginPage() {
             <input
               type="password"
               required
-              minLength={6}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="focus-ring input-field"
               placeholder="••••••••"
             />
+            {passwordError ? <p className="mt-1 text-xs text-red-600">{passwordError}</p> : null}
           </label>
 
           {errorMessage ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{errorMessage}</p> : null}

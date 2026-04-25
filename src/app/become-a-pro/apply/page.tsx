@@ -5,38 +5,53 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Database } from '@/lib/database.types';
 import { getSupabaseClient } from '@/lib/supabase';
+import {
+  isValidEmail,
+  isValidFullName,
+  normalizeEmail,
+  normalizeKenyanPhone,
+  normalizeLocation,
+  normalizeName
+} from '@/lib/validation';
 
 type ExistingApplication = Pick<
   Database['public']['Tables']['pro_applications']['Row'],
   'id' | 'status' | 'created_at' | 'updated_at' | 'rejection_reason' | 'admin_notes'
 >;
 
+const initialFormState = {
+  full_name: '',
+  phone: '',
+  email: '',
+  main_service_category_id: '',
+  other_services: '',
+  service_areas: '',
+  years_experience: '0',
+  bio: '',
+  availability: '',
+  location: '',
+  profile_photo_url: '',
+  portfolio_notes: '',
+  proof_document_url: '',
+  certification_notes: '',
+  references: '',
+  price_guide: ''
+};
+
+type ProApplicationErrors = Partial<Record<keyof typeof initialFormState, string>> & {
+  agreements?: string;
+};
+
 export default function BecomeAProApplyPage() {
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<ProApplicationErrors>({});
   const [success, setSuccess] = useState(false);
   const [existingApplication, setExistingApplication] = useState<ExistingApplication | null>(null);
   const [agreements, setAgreements] = useState({ verification: false, accurateInfo: false });
-  const [form, setForm] = useState({
-    full_name: '',
-    phone: '',
-    email: '',
-    main_service_category_id: '',
-    other_services: '',
-    service_areas: '',
-    years_experience: '0',
-    bio: '',
-    availability: '',
-    location: '',
-    profile_photo_url: '',
-    portfolio_notes: '',
-    proof_document_url: '',
-    certification_notes: '',
-    references: '',
-    price_guide: ''
-  });
+  const [form, setForm] = useState(initialFormState);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
@@ -89,9 +104,73 @@ export default function BecomeAProApplyPage() {
     event.preventDefault();
     setIsSubmitting(true);
     setErrorMessage('');
+    setFieldErrors({});
+
+    const normalizedName = normalizeName(form.full_name);
+    const normalizedEmail = normalizeEmail(form.email);
+    const normalizedPhone = normalizeKenyanPhone(form.phone);
+    const normalizedLocation = normalizeLocation(form.location);
+    const serviceAreas = form.service_areas.trim();
+    const availability = form.availability.trim();
+    const bio = form.bio.trim();
+    const yearsExperience = Number(form.years_experience);
+    const priceGuide = form.price_guide.trim();
+
+    const errors: ProApplicationErrors = {};
+
+    if (!normalizedName) {
+      errors.full_name = 'Full name is required.';
+    } else if (!isValidFullName(normalizedName)) {
+      errors.full_name = 'Enter a valid full name.';
+    }
+
+    if (!normalizedPhone) {
+      errors.phone = 'Enter a valid Kenyan phone number.';
+    }
+
+    if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
+      errors.email = 'Enter a valid email address.';
+    }
+
+    if (!normalizedLocation || normalizedLocation.length < 2) {
+      errors.location = 'Enter a valid location.';
+    }
+
+    if (!form.main_service_category_id) {
+      errors.main_service_category_id = 'Select your main service.';
+    }
+
+    if (!serviceAreas || serviceAreas.length < 2) {
+      errors.service_areas = 'Enter your service areas.';
+    }
+
+    if (!Number.isFinite(yearsExperience) || yearsExperience < 0 || yearsExperience > 60) {
+      errors.years_experience = 'Years of experience must be between 0 and 60.';
+    }
+
+    if (!availability) {
+      errors.availability = 'Availability is required.';
+    }
+
+    if (!bio) {
+      errors.bio = 'Bio is required.';
+    } else if (bio.length < 30) {
+      errors.bio = 'Bio must be at least 30 characters.';
+    } else if (bio.length > 600) {
+      errors.bio = 'Bio must be 600 characters or less.';
+    }
+
+    if (priceGuide.length > 120) {
+      errors.price_guide = 'Price guide must be 120 characters or less.';
+    }
 
     if (!agreements.verification || !agreements.accurateInfo) {
-      setErrorMessage('Please confirm both trust statements before submitting your application.');
+      errors.agreements = 'Please confirm both trust statements.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setErrorMessage('Please fix the highlighted fields.');
       setIsSubmitting(false);
       return;
     }
@@ -131,20 +210,20 @@ export default function BecomeAProApplyPage() {
 
       const payload: Database['public']['Tables']['pro_applications']['Insert'] = {
         user_id: session.user.id,
-        full_name: form.full_name.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim(),
+        full_name: normalizedName,
+        phone: normalizedPhone!,
+        email: normalizedEmail,
         main_service_category_id: form.main_service_category_id,
         other_services: form.other_services.trim() || null,
-        service_areas: form.service_areas.trim(),
-        years_experience: Number(form.years_experience) || 0,
-        bio: form.bio.trim(),
-        availability: form.availability.trim(),
-        location: form.location.trim(),
+        service_areas: serviceAreas,
+        years_experience: yearsExperience,
+        bio,
+        availability,
+        location: normalizedLocation,
         profile_photo_url: form.profile_photo_url.trim() || 'placeholder://profile-photo',
         proof_document_url: form.proof_document_url.trim() || null,
         portfolio_notes: [form.portfolio_notes, form.certification_notes, form.references].filter(Boolean).join('\n') || null,
-        price_guide: form.price_guide.trim() || null,
+        price_guide: priceGuide || null,
         status: 'pending',
         updated_at: new Date().toISOString()
       };
@@ -167,10 +246,10 @@ export default function BecomeAProApplyPage() {
       const { error: profileError } = await supabase.from('profiles').upsert({
         id: session.user.id,
         role: 'customer',
-        full_name: form.full_name.trim() || null,
-        phone: form.phone.trim() || null,
-        email: form.email.trim() || session.user.email || null,
-        default_location: form.location.trim() || null,
+        full_name: normalizedName || null,
+        phone: normalizedPhone || null,
+        email: normalizedEmail || session.user.email || null,
+        default_location: normalizedLocation || null,
         pro_application_status: 'pending',
         updated_at: new Date().toISOString()
       });
@@ -247,9 +326,13 @@ export default function BecomeAProApplyPage() {
             <h2 className="text-base font-semibold text-slate-900">1. Account and contact</h2>
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               <input required value={form.full_name} onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))} className="focus-ring input-field" placeholder="Full name*" />
+              {fieldErrors.full_name ? <p className="-mt-2 text-xs text-red-600">{fieldErrors.full_name}</p> : null}
               <input required value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} className="focus-ring input-field" placeholder="Phone number*" />
+              {fieldErrors.phone ? <p className="-mt-2 text-xs text-red-600">{fieldErrors.phone}</p> : null}
               <input required type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} className="focus-ring input-field" placeholder="Email*" />
+              {fieldErrors.email ? <p className="-mt-2 text-xs text-red-600">{fieldErrors.email}</p> : null}
               <input required value={form.location} onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))} className="focus-ring input-field" placeholder="Location*" />
+              {fieldErrors.location ? <p className="-mt-2 text-xs text-red-600">{fieldErrors.location}</p> : null}
             </div>
           </section>
 
@@ -264,10 +347,14 @@ export default function BecomeAProApplyPage() {
                   </option>
                 ))}
               </select>
+              {fieldErrors.main_service_category_id ? <p className="-mt-2 text-xs text-red-600">{fieldErrors.main_service_category_id}</p> : null}
               <input required value={form.other_services} onChange={(event) => setForm((current) => ({ ...current, other_services: event.target.value }))} className="focus-ring input-field" placeholder="Other services offered*" />
               <input required value={form.service_areas} onChange={(event) => setForm((current) => ({ ...current, service_areas: event.target.value }))} className="focus-ring input-field" placeholder="Service areas*" />
+              {fieldErrors.service_areas ? <p className="-mt-2 text-xs text-red-600">{fieldErrors.service_areas}</p> : null}
               <input required type="number" min={0} value={form.years_experience} onChange={(event) => setForm((current) => ({ ...current, years_experience: event.target.value }))} className="focus-ring input-field" placeholder="Years of experience*" />
+              {fieldErrors.years_experience ? <p className="-mt-2 text-xs text-red-600">{fieldErrors.years_experience}</p> : null}
               <input required value={form.availability} onChange={(event) => setForm((current) => ({ ...current, availability: event.target.value }))} className="focus-ring input-field" placeholder="Availability*" />
+              {fieldErrors.availability ? <p className="-mt-2 text-xs text-red-600">{fieldErrors.availability}</p> : null}
             </div>
           </section>
 
@@ -275,7 +362,9 @@ export default function BecomeAProApplyPage() {
             <h2 className="text-base font-semibold text-slate-900">3. Professional profile</h2>
             <div className="mt-3 grid gap-4">
               <textarea required rows={3} value={form.bio} onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))} className="focus-ring input-field" placeholder="Short bio*" />
+              {fieldErrors.bio ? <p className="-mt-2 text-xs text-red-600">{fieldErrors.bio}</p> : null}
               <input value={form.price_guide} onChange={(event) => setForm((current) => ({ ...current, price_guide: event.target.value }))} className="focus-ring input-field" placeholder="Price guide" />
+              {fieldErrors.price_guide ? <p className="-mt-2 text-xs text-red-600">{fieldErrors.price_guide}</p> : null}
               <input value={form.profile_photo_url} onChange={(event) => setForm((current) => ({ ...current, profile_photo_url: event.target.value }))} className="focus-ring input-field" placeholder="Profile photo URL placeholder" />
               <textarea value={form.portfolio_notes} onChange={(event) => setForm((current) => ({ ...current, portfolio_notes: event.target.value }))} className="focus-ring input-field" placeholder="Portfolio notes or project examples" rows={2} />
               <input value={form.proof_document_url} onChange={(event) => setForm((current) => ({ ...current, proof_document_url: event.target.value }))} className="focus-ring input-field" placeholder="Proof / ID / certification URL placeholder" />
@@ -306,6 +395,7 @@ export default function BecomeAProApplyPage() {
                 <span>I confirm the information submitted is accurate.</span>
               </label>
             </div>
+            {fieldErrors.agreements ? <p className="mt-2 text-xs text-red-600">{fieldErrors.agreements}</p> : null}
           </section>
 
           {/* TODO: Replace URL/notes placeholders with Supabase Storage upload fields once storage + policies are ready. */}
