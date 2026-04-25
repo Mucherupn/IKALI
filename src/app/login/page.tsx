@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useState } from 'react';
-import { ensureCustomerProfile, getCurrentProfile, getRedirectForProfile } from '@/lib/auth';
+import { ensureCustomerProfile, formatSupabaseError, getCurrentProfile, getRedirectForProfile } from '@/lib/auth';
 import { getSupabaseClient, getSupabaseConfigError } from '@/lib/supabase';
 import { isValidEmail, normalizeEmail } from '@/lib/validation';
 
@@ -79,7 +79,7 @@ export default function LoginPage() {
 
       if (error) {
         if (isDevelopment) {
-          console.error('Login auth error', error);
+          console.error('Login auth error', formatSupabaseError(error));
         }
         setErrorMessage(toLoginErrorMessage(error.message));
         return;
@@ -90,25 +90,12 @@ export default function LoginPage() {
         return;
       }
 
-      const { data: authUserData, error: authUserError } = await supabase.auth.getUser();
-      if (authUserError && isDevelopment) {
-        console.error('Login getUser error', authUserError);
-      }
-
-      const authUser = authUserData.user ?? data.user;
-      if (!authUser) {
-        setErrorMessage('Sign in succeeded, but we could not load your user account. Please try again.');
-        return;
-      }
-
-      let profile = await getCurrentProfile(authUser.id);
+      let profile = await getCurrentProfile(data.user.id);
       if (!profile) {
-        const ensured = await ensureCustomerProfile(authUser, { email: normalizedEmail });
+        const ensured = await ensureCustomerProfile({ email: normalizedEmail });
         if (ensured.error) {
-          if (isDevelopment) {
-            console.error('Login profile upsert/fetch error', ensured.error);
-          }
-          setErrorMessage('You are signed in, but profile setup failed. Please refresh and try again.');
+          console.error('Login profile upsert/fetch error', formatSupabaseError(ensured.error));
+          setErrorMessage('You are signed in, but your profile could not be prepared. Please contact support.');
           return;
         }
         profile = ensured.profile;

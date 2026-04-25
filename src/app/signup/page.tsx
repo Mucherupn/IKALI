@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useState } from 'react';
-import { ensureCustomerProfile, getRedirectForProfile } from '@/lib/auth';
+import { ensureCustomerProfile, formatSupabaseError, getRedirectForProfile } from '@/lib/auth';
 import { getSupabaseClient, getSupabaseConfigError } from '@/lib/supabase';
 import {
   isValidEmail,
@@ -143,7 +143,7 @@ export default function SignupPage() {
 
       if (error) {
         if (isDevelopment) {
-          console.error('Signup auth error', error);
+          console.error('Signup auth error', formatSupabaseError(error));
         }
         setErrorMessage(toSignupErrorMessage(error.message));
         return;
@@ -154,18 +154,13 @@ export default function SignupPage() {
         return;
       }
 
-      const { data: authUserData, error: authUserError } = await supabase.auth.getUser();
-      if (authUserError && isDevelopment) {
-        console.error('Signup getUser error', authUserError);
-      }
-
-      const authUser = authUserData.user ?? data.user;
-      if (!authUser) {
-        setErrorMessage('Account created, but we could not load your user profile. Please sign in and try again.');
+      if (!data.session) {
+        setSuccessMessage('Account created. Please sign in to continue.');
+        setShowSignInLink(true);
         return;
       }
 
-      const ensured = await ensureCustomerProfile(authUser, {
+      const ensured = await ensureCustomerProfile({
         full_name: normalizedName,
         phone: normalizedPhone!,
         email: normalizedEmail,
@@ -173,18 +168,8 @@ export default function SignupPage() {
       });
 
       if (ensured.error) {
-        if (isDevelopment) {
-          console.error('Signup profile upsert/fetch error', ensured.error);
-        }
-        if (data.session) {
-          setErrorMessage('You are signed in, but profile setup failed. Please refresh and try again.');
-          return;
-        }
-      }
-
-      if (!data.session) {
-        setSuccessMessage('Account created. Please sign in to continue.');
-        setShowSignInLink(true);
+        console.error('Signup profile upsert/fetch error', formatSupabaseError(ensured.error));
+        setErrorMessage('You are signed in, but your profile could not be prepared. Please contact support.');
         return;
       }
 
