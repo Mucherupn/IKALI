@@ -154,15 +154,32 @@ export default function SignupPage() {
         return;
       }
 
-      const ensured = await ensureCustomerProfile(data.user, {
+      const { data: authUserData, error: authUserError } = await supabase.auth.getUser();
+      if (authUserError && isDevelopment) {
+        console.error('Signup getUser error', authUserError);
+      }
+
+      const authUser = authUserData.user ?? data.user;
+      if (!authUser) {
+        setErrorMessage('Account created, but we could not load your user profile. Please sign in and try again.');
+        return;
+      }
+
+      const ensured = await ensureCustomerProfile(authUser, {
         full_name: normalizedName,
         phone: normalizedPhone!,
         email: normalizedEmail,
         default_location: normalizedLocation
       });
 
-      if (ensured.error && isDevelopment) {
-        console.error('Signup profile upsert error', ensured.error);
+      if (ensured.error) {
+        if (isDevelopment) {
+          console.error('Signup profile upsert/fetch error', ensured.error);
+        }
+        if (data.session) {
+          setErrorMessage('You are signed in, but profile setup failed. Please refresh and try again.');
+          return;
+        }
       }
 
       if (!data.session) {

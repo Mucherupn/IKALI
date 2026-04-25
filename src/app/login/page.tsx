@@ -90,12 +90,23 @@ export default function LoginPage() {
         return;
       }
 
-      let profile = await getCurrentProfile(data.user.id);
+      const { data: authUserData, error: authUserError } = await supabase.auth.getUser();
+      if (authUserError && isDevelopment) {
+        console.error('Login getUser error', authUserError);
+      }
+
+      const authUser = authUserData.user ?? data.user;
+      if (!authUser) {
+        setErrorMessage('Sign in succeeded, but we could not load your user account. Please try again.');
+        return;
+      }
+
+      let profile = await getCurrentProfile(authUser.id);
       if (!profile) {
-        const ensured = await ensureCustomerProfile(data.user, { email: normalizedEmail });
+        const ensured = await ensureCustomerProfile(authUser, { email: normalizedEmail });
         if (ensured.error) {
           if (isDevelopment) {
-            console.error('Login profile ensure error', ensured.error);
+            console.error('Login profile upsert/fetch error', ensured.error);
           }
           setErrorMessage('You are signed in, but profile setup failed. Please refresh and try again.');
           return;

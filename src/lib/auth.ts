@@ -65,7 +65,7 @@ export async function ensureCustomerProfile(
   }
 ) {
   const supabase = getSupabaseClient();
-  const now = new Date().toISOString();
+  const fallbackEmail = formData?.email ? normalizeEmail(formData.email) : user.email ?? null;
 
   const payload: Database['public']['Tables']['profiles']['Insert'] = {
     id: user.id,
@@ -73,21 +73,51 @@ export async function ensureCustomerProfile(
     pro_application_status: 'not_applied',
     full_name: formData?.full_name ? normalizeName(formData.full_name) : ((user.user_metadata?.full_name as string | undefined) ?? null),
     phone: formData?.phone ? normalizeKenyanPhone(formData.phone) : null,
-    email: formData?.email ? normalizeEmail(formData.email) : user.email ?? null,
-    default_location: formData?.default_location ? normalizeLocation(formData.default_location) : null,
-    updated_at: now
+    email: fallbackEmail,
+    default_location: formData?.default_location ? normalizeLocation(formData.default_location) : null
   };
 
-  const { data, error } = await supabase.from('profiles').upsert(payload).select('*').maybeSingle();
-
-  if (error) {
+  const { error: upsertError } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' });
+  if (upsertError) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('ensureCustomerProfile error', error);
+      console.error('ensureCustomerProfile upsert error', upsertError);
     }
-    return { profile: null, error };
+    return { profile: null, error: upsertError };
   }
 
-  return { profile: data ?? null, error: null };
+  const { data: profile, error: fetchError } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  if (fetchError || !profile) {
+    if (process.env.NODE_ENV === 'development' && fetchError) {
+      console.error('ensureCustomerProfile fetch error', fetchError);
+    }
+
+    const basicPayload: Database['public']['Tables']['profiles']['Insert'] = {
+      id: user.id,
+      role: 'customer',
+      email: fallbackEmail,
+      pro_application_status: 'not_applied'
+    };
+
+    const { error: fallbackUpsertError } = await supabase.from('profiles').upsert(basicPayload, { onConflict: 'id' });
+    if (fallbackUpsertError) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('ensureCustomerProfile fallback upsert error', fallbackUpsertError);
+      }
+      return { profile: null, error: fallbackUpsertError };
+    }
+
+    const { data: fallbackProfile, error: fallbackFetchError } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    if (fallbackFetchError || !fallbackProfile) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('ensureCustomerProfile fallback fetch error', fallbackFetchError);
+      }
+      return { profile: null, error: fallbackFetchError ?? fetchError ?? new Error('Profile fetch failed after upsert.') };
+    }
+
+    return { profile: fallbackProfile, error: null };
+  }
+
+  return { profile, error: null };
 }
 
 export async function getCurrentSession() {
