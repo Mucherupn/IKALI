@@ -20,6 +20,10 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 function toSignupErrorMessage(message: string | undefined) {
   const normalized = message?.toLowerCase() ?? '';
 
+  if (normalized.includes('email rate limit exceeded') || normalized.includes('rate limit')) {
+    return 'Too many signup attempts. Please wait a few minutes and try again.';
+  }
+
   if (normalized.includes('already') || normalized.includes('registered') || normalized.includes('exists')) {
     return 'An account with this email already exists. Please sign in instead.';
   }
@@ -28,7 +32,11 @@ function toSignupErrorMessage(message: string | undefined) {
     return 'Password does not meet requirements.';
   }
 
-  return 'Unable to create account. Please review your details and try again.';
+  if (message && message.trim().length > 0) {
+    return message;
+  }
+
+  return 'Unable to create account right now. Please try again shortly.';
 }
 
 type SignupErrors = {
