@@ -44,14 +44,14 @@ export default async function HomePage() {
   return (
     <main className="bg-[#fbfaf8] text-[#111111]">
       {/* HERO */}
-      <section className="bg-[#fbfaf8] py-16 sm:py-24 lg:py-28">
+      <section className="bg-[#fbfaf8] py-12 sm:py-20 lg:py-24">
         <div className="section-shell">
           <div className="mx-auto max-w-5xl text-center">
-            <h1 className="mx-auto max-w-4xl text-5xl font-semibold leading-[1.02] tracking-[-0.055em] text-[#111111] sm:text-6xl lg:text-7xl">
+            <h1 className="mx-auto max-w-4xl text-4xl font-semibold leading-[1.05] tracking-[-0.04em] text-[#111111] sm:text-5xl lg:text-6xl">
               Find a service provider near you.
             </h1>
 
-            <div className="mx-auto mt-10 max-w-4xl text-left">
+            <div className="mx-auto mt-8 max-w-4xl text-left sm:mt-10">
               <GlobalSearch services={services} />
             </div>
           </div>

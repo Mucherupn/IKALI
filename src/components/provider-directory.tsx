@@ -256,7 +256,7 @@ export function ProviderDirectory({
   return (
     <div className="mt-6 space-y-5">
       <section className="card p-4 sm:p-5">
-        <div className={`grid gap-3 ${withSearch && !isServiceResults ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+        <div className={`grid gap-3 ${withSearch && !isServiceResults ? 'md:grid-cols-2 xl:grid-cols-5' : 'md:grid-cols-2 xl:grid-cols-4'}`}>
           {withSearch && !isServiceResults ? (
             <label className="md:col-span-2">
               <span className="mb-1.5 block text-sm font-medium text-slate-700">Search</span>
@@ -265,7 +265,7 @@ export function ProviderDirectory({
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={searchPlaceholder}
-                className="focus-ring w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
+                className="focus-ring min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
               />
             </label>
           ) : null}
@@ -279,7 +279,7 @@ export function ProviderDirectory({
                 setSelectedLocation(place.name);
               }}
               placeholder="Enter your area"
-              className="focus-ring w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
+              className="focus-ring min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
             />
           </label>
 
@@ -288,7 +288,7 @@ export function ProviderDirectory({
             <select
               value={minimumRating}
               onChange={(event) => setMinimumRating(event.target.value)}
-              className="focus-ring w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
+              className="focus-ring min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
             >
               <option value="all">Any rating</option>
               <option value="4">4.0+ stars</option>
@@ -301,7 +301,7 @@ export function ProviderDirectory({
             <select
               value={sortOption}
               onChange={(event) => setSortOption(event.target.value as SortOption)}
-              className="focus-ring w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
+              className="focus-ring min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
             >
               <option value="recommended">Recommended</option>
               <option value="highest-rated">Highest rated</option>
@@ -311,9 +311,9 @@ export function ProviderDirectory({
           </label>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-4">
-            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <label className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm text-slate-700">
               <input
                 type="checkbox"
                 checked={verifiedOnly}
@@ -322,7 +322,7 @@ export function ProviderDirectory({
               />
               Verified only
             </label>
-            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+            <label className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm text-slate-700">
               <input
                 type="checkbox"
                 checked={availableOnly}
@@ -334,7 +334,7 @@ export function ProviderDirectory({
             <button
               type="button"
               onClick={requestBrowserLocation}
-              className="focus-ring rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="focus-ring min-h-11 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               Use my location
             </button>
@@ -343,7 +343,7 @@ export function ProviderDirectory({
           <button
             type="button"
             onClick={clearFilters}
-            className="focus-ring rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="focus-ring min-h-11 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 md:justify-self-end"
           >
             Clear filters
           </button>
@@ -357,7 +357,7 @@ export function ProviderDirectory({
       {notice ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{notice}</div> : null}
 
       {displayedProviders.length > 0 ? (
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {displayedProviders.map((provider) => {
             const distanceKm =
               userCoords && provider.latitude !== undefined && provider.longitude !== undefined
