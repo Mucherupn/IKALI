@@ -37,6 +37,14 @@ export default function LoginPage() {
 
       let destination = nextPath;
 
+      await supabase.from('profiles').upsert({
+        id: data.user.id,
+        email: data.user.email ?? email.trim(),
+        role: 'customer',
+        pro_application_status: 'not_applied',
+        updated_at: new Date().toISOString()
+      });
+
       if (!destination) {
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).maybeSingle();
         destination = routeForRole(profile?.role);
