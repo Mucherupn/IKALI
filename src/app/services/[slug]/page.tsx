@@ -9,6 +9,7 @@ type ServiceDetailsPageProps = {
   searchParams?: Promise<{
     location?: string;
     q?: string;
+    nearMe?: string;
   }>;
 };
 
@@ -54,6 +55,7 @@ export default async function ServiceDetailsPage({ params, searchParams }: Servi
         searchPlaceholder={`Search ${service.name.toLowerCase()} providers by name, area, or bio`}
         initialQuery={queryParams.q ?? ''}
         initialLocation={queryParams.location ?? ''}
+        initialNearMe={queryParams.nearMe === '1'}
         showSuggestions
       />
     </div>

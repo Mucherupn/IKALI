@@ -38,6 +38,8 @@ function normalizeProvider(provider: {
   availability_text?: string | null;
   serviceSlug: string;
   reviews: number;
+  latitude?: number | null;
+  longitude?: number | null;
 }): Provider {
   return {
     id: provider.id,
@@ -58,6 +60,8 @@ function normalizeProvider(provider: {
     availability: provider.availability_text ?? 'Contact for availability',
     reviews: provider.reviews,
     reviewCount: provider.reviews,
+    latitude: provider.latitude ?? undefined,
+    longitude: provider.longitude ?? undefined,
     phoneVerified: provider.is_verified,
     experienceChecked: provider.years_experience > 0,
     workHistoryReviewed: provider.completed_jobs > 0,

@@ -34,7 +34,9 @@ export const providers: Provider[] = [
     whatsapp: '254712345678',
     availability: 'Available today',
     reviews: 132,
-    reviewCount: 132
+    reviewCount: 132,
+    latitude: -1.2921,
+    longitude: 36.7846
   },
   {
     id: '2',
@@ -58,7 +60,9 @@ export const providers: Provider[] = [
     whatsapp: '254798765432',
     availability: 'Next slot: tomorrow',
     reviews: 97,
-    reviewCount: 97
+    reviewCount: 97,
+    latitude: -1.2673,
+    longitude: 36.8108
   },
   {
     id: '3',
@@ -82,7 +86,9 @@ export const providers: Provider[] = [
     whatsapp: '254701234567',
     availability: 'Available this weekend',
     reviews: 205,
-    reviewCount: 205
+    reviewCount: 205,
+    latitude: -1.3127,
+    longitude: 36.8432
   },
   {
     id: '4',
@@ -106,7 +112,9 @@ export const providers: Provider[] = [
     whatsapp: '254722333444',
     availability: 'Available tomorrow morning',
     reviews: 88,
-    reviewCount: 88
+    reviewCount: 88,
+    latitude: -1.2833,
+    longitude: 36.7667
   },
   {
     id: '5',
@@ -130,7 +138,9 @@ export const providers: Provider[] = [
     whatsapp: '254733444555',
     availability: 'Available next week',
     reviews: 166,
-    reviewCount: 166
+    reviewCount: 166,
+    latitude: -1.3195,
+    longitude: 36.7073
   },
   {
     id: '6',
@@ -154,7 +164,9 @@ export const providers: Provider[] = [
     whatsapp: '254744555666',
     availability: 'Available today',
     reviews: 149,
-    reviewCount: 149
+    reviewCount: 149,
+    latitude: -1.3097,
+    longitude: 36.9020
   }
 ];
 
