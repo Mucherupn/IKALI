@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { HireButton } from '@/components/hire-button';
 import { TrustPill } from '@/components/trust-pill';
 import { Provider } from '@/lib/types';
 
@@ -42,19 +43,13 @@ export function ProviderCard({ provider, serviceName, distanceKm }: { provider: 
           <TrustPill label={provider.responseTime ?? 'Response time being verified'} tone="neutral" />
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <a
-            href={`tel:${provider.phone}`}
-            className="focus-ring rounded-lg border border-slate-300 px-3 py-2 text-center text-sm font-medium text-slate-800 transition hover:bg-slate-50"
-          >
-            Call
-          </a>
-          <a
-            href={`https://wa.me/${provider.whatsapp}`}
+        <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <HireButton
+            href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.slug)}`}
             className="focus-ring rounded-lg bg-[#D71920] px-3 py-2 text-center text-sm font-medium text-white transition hover:bg-[#A80F1A]"
           >
-            WhatsApp
-          </a>
+            Hire this pro
+          </HireButton>
           <Link
             href={`/providers/${provider.slug}`}
             className="focus-ring rounded-lg border border-[#fecdd3] bg-[#fff1f2] px-3 py-2 text-center text-sm font-medium text-[#7f1d1d] transition hover:bg-[#ffe4e6]"
@@ -62,6 +57,8 @@ export function ProviderCard({ provider, serviceName, distanceKm }: { provider: 
             View profile
           </Link>
         </div>
+
+        <p className="mt-3 text-xs text-slate-500">Contact details are shared only after a secure booking request.</p>
       </div>
     </article>
   );

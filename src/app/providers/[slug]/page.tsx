@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { HireButton } from '@/components/hire-button';
 import { TrustPill } from '@/components/trust-pill';
 import { getMockReviewsForProvider } from '@/data/mock-data';
 import { getProviderBySlug, getServiceNameBySlug } from '@/lib/data';
@@ -80,25 +81,14 @@ export default async function ProviderDetailPage({ params }: { params: Promise<{
           </div>
 
           <div className="mt-5 hidden gap-3 sm:flex">
-            <a
-              href={`tel:${provider.phone}`}
-              className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-100"
-            >
-              Call {provider.phone}
-            </a>
-            <a
-              href={`https://wa.me/${provider.whatsapp}`}
-              className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-[#111827] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#080808]"
-            >
-              WhatsApp
-            </a>
-            <Link
+            <HireButton
               href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.slug)}`}
-              className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-[#fff1f2]0 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#A80F1A]"
+              className="focus-ring inline-flex min-h-11 items-center justify-center rounded-xl bg-[#D71920] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#A80F1A]"
             >
-              Book this professional
-            </Link>
+              Hire this pro
+            </HireButton>
           </div>
+          <p className="mt-3 text-xs text-slate-200">Provider phone numbers are protected and shared only after booking is submitted.</p>
         </div>
       </section>
 
@@ -194,25 +184,13 @@ export default async function ProviderDetailPage({ params }: { params: Promise<{
       </section>
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-6px_20px_rgba(15,23,42,0.08)] backdrop-blur sm:hidden">
-        <div className="mx-auto grid max-w-5xl grid-cols-3 gap-2">
-          <a
-            href={`tel:${provider.phone}`}
-            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-900"
-          >
-            Call
-          </a>
-          <a
-            href={`https://wa.me/${provider.whatsapp}`}
-            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-[#111827] px-2 text-xs font-semibold text-white"
-          >
-            WhatsApp
-          </a>
-          <Link
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-2">
+          <HireButton
             href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.slug)}`}
             className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-[#D71920] px-2 text-xs font-semibold text-white"
           >
-            Book
-          </Link>
+            Hire this pro
+          </HireButton>
         </div>
       </div>
     </div>

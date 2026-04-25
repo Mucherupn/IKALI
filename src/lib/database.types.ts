@@ -177,6 +177,44 @@ export type Database = {
           created_at?: string;
         }
       >;
+      profiles: TableDef<
+        {
+          id: string;
+          role: string | null;
+          full_name: string | null;
+          phone: string | null;
+          email: string | null;
+          default_location: string | null;
+          latitude: number | null;
+          longitude: number | null;
+          created_at: string;
+          updated_at: string;
+        },
+        {
+          id: string;
+          role?: string | null;
+          full_name?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          default_location?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        },
+        {
+          id?: string;
+          role?: string | null;
+          full_name?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          default_location?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        }
+      >;
       reviews: TableDef<
         {
           id: string;

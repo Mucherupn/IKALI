@@ -4,7 +4,10 @@ const links = [
   { href: '/services', label: 'Services' },
   { href: '/providers', label: 'Providers' },
   { href: '/trust', label: 'Trust' },
-  { href: '/become-a-pro', label: 'Join as Pro' }
+  { href: '/become-a-pro', label: 'Join as Pro' },
+  { href: '/pro', label: 'Pro Hub' },
+  { href: '/login', label: 'Log in' },
+  { href: '/account', label: 'Account' }
 ];
 
 export function Navbar() {
