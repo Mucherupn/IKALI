@@ -27,13 +27,13 @@ export default async function ServiceDetailsPage({ params, searchParams }: Servi
   const serviceNamesBySlug = Object.fromEntries(services.map((item) => [item.slug, item.name]));
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-      <Link href="/services" className="text-sm font-semibold text-[#D71920]">
+    <div className="section-shell py-8 sm:py-10">
+      <Link href="/services" className="focus-ring inline-flex rounded-md text-sm font-semibold text-[#D71920]">
         ← Back to services
       </Link>
 
       <header className="mt-4">
-        <h1 className="text-3xl font-bold text-slate-900">{service.name} near you</h1>
+        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">{service.name} near you</h1>
         <p className="mt-2 max-w-3xl text-slate-600">Compare available providers, ratings and service areas.</p>
       </header>
 

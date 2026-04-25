@@ -425,7 +425,7 @@ export function ControlAdminDashboard() {
           <h1 className="text-3xl font-bold text-slate-900">Marketplace Control</h1>
           <p className="mt-1 text-sm text-slate-600">Operational dashboard for providers, service categories, and job requests.</p>
         </div>
-        <button onClick={loadAll} className="focus-ring rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">
+        <button onClick={loadAll} className="focus-ring min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">
           Refresh Data
         </button>
       </div>
@@ -463,7 +463,7 @@ export function ControlAdminDashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`focus-ring rounded-lg px-4 py-2 text-sm font-semibold ${
+              className={`focus-ring min-h-11 rounded-lg px-4 py-2 text-sm font-semibold ${
                 activeTab === tab.id ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
@@ -513,7 +513,7 @@ export function ControlAdminDashboard() {
                   />
                 </label>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <label className="text-sm font-medium text-slate-700">
                     Rating
                     <input
@@ -593,18 +593,18 @@ export function ControlAdminDashboard() {
                   </label>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <button
                     type="submit"
                     disabled={isSavingProvider}
-                    className="focus-ring rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                    className="focus-ring min-h-11 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
                   >
                     {isSavingProvider ? 'Saving...' : providerForm.id ? 'Update provider' : 'Add provider'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setProviderForm(providerInitialState)}
-                    className="focus-ring rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    className="focus-ring min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   >
                     Clear
                   </button>
@@ -667,14 +667,14 @@ export function ControlAdminDashboard() {
                       <p className="font-semibold text-slate-900">{provider.full_name}</p>
                       <p className="text-xs text-slate-500">{provider.location}</p>
                       <p className="mt-2 text-xs text-slate-600">{provider.is_verified ? 'Verified' : 'Unverified'} · {provider.is_featured ? 'Featured' : 'Standard'}</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <button onClick={() => startEditProvider(provider)} className="rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-800">
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <button onClick={() => startEditProvider(provider)} className="min-h-10 rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-800">
                           Edit
                         </button>
-                        <button onClick={() => toggleProviderFlag(provider, 'is_verified')} className="rounded-md bg-red-100 px-2 py-1 text-xs font-semibold text-red-800">
+                        <button onClick={() => toggleProviderFlag(provider, 'is_verified')} className="min-h-10 rounded-md bg-red-100 px-2 py-1 text-xs font-semibold text-red-800">
                           {provider.is_verified ? 'Unverify' : 'Verify'}
                         </button>
-                        <button onClick={() => deleteProvider(provider.id)} className="rounded-md bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700">
+                        <button onClick={() => deleteProvider(provider.id)} className="col-span-2 min-h-10 rounded-md bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700">
                           Delete
                         </button>
                       </div>
@@ -735,18 +735,18 @@ export function ControlAdminDashboard() {
                   />
                   Active status
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <button
                     type="submit"
                     disabled={isSavingCategory}
-                    className="focus-ring rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                    className="focus-ring min-h-11 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
                   >
                     {isSavingCategory ? 'Saving...' : categoryForm.id ? 'Update category' : 'Add category'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setCategoryForm(categoryInitialState)}
-                    className="focus-ring rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    className="focus-ring min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   >
                     Clear
                   </button>

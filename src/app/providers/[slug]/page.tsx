@@ -40,7 +40,7 @@ export default async function ProviderDetailPage({ params }: { params: Promise<{
       </Link>
 
       <section className="card overflow-hidden">
-        <div className="bg-gradient-to-br from-[#080808] via-[#111827] to-[#1f2937] p-5 text-white sm:p-7">
+        <div className="bg-[#111827] p-5 text-white sm:p-7">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             <div className="relative h-28 w-28 overflow-hidden rounded-2xl border-4 border-white/20 shadow-lg sm:h-36 sm:w-36">
               <Image src={provider.photo} alt={provider.name} fill className="object-cover" />
@@ -187,11 +187,11 @@ export default async function ProviderDetailPage({ params }: { params: Promise<{
         </div>
       </section>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-6px_20px_rgba(15,23,42,0.08)] backdrop-blur sm:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white p-3 shadow-[0_-6px_20px_rgba(15,23,42,0.08)] sm:hidden">
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-2">
           <HireButton
             href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.slug)}`}
-            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-[#D71920] px-2 text-xs font-semibold text-white"
+            className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-[#D71920] px-2 text-sm font-semibold text-white"
           >
             Hire this pro
           </HireButton>

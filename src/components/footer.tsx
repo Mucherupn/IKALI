@@ -24,8 +24,8 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-24 bg-[#090909] text-white">
-      <div className="section-shell py-12">
+    <footer className="mt-16 bg-[#090909] text-white sm:mt-24">
+      <div className="section-shell py-10 sm:py-12">
         <div className="grid gap-10 lg:grid-cols-[1fr_1.15fr] lg:items-start">
           <div>
             <Link href="/" className="inline-flex items-center rounded-xl bg-white px-4 py-2.5">
@@ -38,10 +38,10 @@ export function Footer() {
               Trusted local services, built for Kenya.
             </p>
 
-            <div className="mt-7 flex flex-wrap gap-3">
+            <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap">
               <Link
   href="/app"
-  className="group rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white/80 transition hover:border-white hover:bg-white"
+  className="group inline-flex min-h-11 items-center justify-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white/80 transition hover:border-white hover:bg-white"
 >
   <span className="transition group-hover:!text-black">
     App Store
@@ -50,7 +50,7 @@ export function Footer() {
 
 <Link
   href="/app"
-  className="group rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white/80 transition hover:border-white hover:bg-white"
+  className="group inline-flex min-h-11 items-center justify-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white/80 transition hover:border-white hover:bg-white"
 >
   <span className="transition group-hover:!text-black">
     Google Play
@@ -59,7 +59,7 @@ export function Footer() {
             </div>
           </div>
 
-          <div className="grid gap-8 sm:grid-cols-3">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {footerLinks.map((group) => (
               <div key={group.title}>
                 <p className="text-sm font-semibold text-white">{group.title}</p>

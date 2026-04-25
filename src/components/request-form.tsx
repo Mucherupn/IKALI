@@ -229,8 +229,8 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
   }
 
   return (
-    <form onSubmit={onSubmit} className="card-premium mt-8 space-y-5 p-5 pb-20 sm:p-6 sm:pb-6">
-      <div className="grid gap-5 sm:grid-cols-2">
+    <form onSubmit={onSubmit} className="card-premium mt-8 space-y-5 p-5 sm:p-6">
+      <div className="grid gap-5 md:grid-cols-2">
         <div>
           <label htmlFor="customerName" className="mb-2 block text-sm font-semibold text-slate-700">
             Customer name*
@@ -261,7 +261,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
         </div>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5 md:grid-cols-2">
         <div>
           <label htmlFor="service" className="mb-2 block text-sm font-semibold text-slate-700">
             Service needed*
@@ -296,7 +296,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
         </div>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5 md:grid-cols-2">
         <div>
           <label htmlFor="preferredDate" className="mb-2 block text-sm font-semibold text-slate-700">
             Preferred date
@@ -340,7 +340,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
 
       <fieldset>
         <legend className="mb-2 text-sm font-semibold text-slate-700">Urgency (optional)</legend>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-2 md:grid-cols-3">
           {[
             { value: 'not-urgent', label: 'Not urgent' },
             { value: 'within-24-hours', label: 'Within 24 hours' },
@@ -420,7 +420,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
       {dataWarning ? <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200">{dataWarning}</p> : null}
       {submitError ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{submitError}</p> : null}
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.10)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+      <div className="pt-2">
         <button
           type="submit"
           disabled={isSubmitting || !authReady || !isAuthenticated || !canBookAsCustomer}

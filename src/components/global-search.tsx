@@ -47,7 +47,7 @@ export function GlobalSearch({ services }: GlobalSearchProps) {
   return (
     <form
       onSubmit={onSubmit}
-      className="mx-auto w-full max-w-4xl rounded-[1.4rem] border border-[#e8e8e8] bg-white p-2 shadow-[0_20px_60px_rgba(17,17,17,0.10)]"
+      className="mx-auto w-full max-w-4xl rounded-[1.1rem] border border-[#e8e8e8] bg-white p-2 shadow-[0_14px_35px_rgba(17,17,17,0.08)] sm:rounded-[1.4rem]"
     >
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
@@ -55,12 +55,12 @@ export function GlobalSearch({ services }: GlobalSearchProps) {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="What service do you need today?"
-          className="min-h-[4.2rem] flex-1 rounded-[1.1rem] border-none bg-[#f7f7f7] px-5 text-base font-medium text-[#111111] outline-none placeholder:text-[#888888] focus:bg-white focus:ring-4 focus:ring-[#e11d2e]/10"
+          className="min-h-[3.25rem] flex-1 rounded-xl border-none bg-[#f7f7f7] px-4 text-base font-medium text-[#111111] outline-none placeholder:text-[#888888] focus:bg-white focus:ring-4 focus:ring-[#e11d2e]/10 sm:min-h-[4.2rem] sm:rounded-[1.1rem] sm:px-5"
         />
 
         <button
           type="submit"
-          className="min-h-[4.2rem] rounded-[1.1rem] bg-[var(--red)] px-8 text-base font-semibold text-white transition hover:bg-[var(--red-dark)] sm:min-w-[150px]"
+          className="min-h-[3.25rem] rounded-xl bg-[var(--red)] px-6 text-base font-semibold text-white transition hover:bg-[var(--red-dark)] sm:min-h-[4.2rem] sm:min-w-[150px] sm:rounded-[1.1rem]"
         >
           Search
         </button>

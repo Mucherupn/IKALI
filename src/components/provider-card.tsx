@@ -10,11 +10,11 @@ export function ProviderCard({ provider, serviceName, distanceKm }: { provider: 
 
   return (
     <article className="card flex h-full flex-col overflow-hidden">
-      <div className="relative h-48 w-full">
+      <div className="relative aspect-[16/10] w-full">
         <Image src={provider.photo} alt={provider.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
       </div>
 
-      <div className="flex flex-1 flex-col p-5">
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
         <div className="flex items-start justify-between gap-2">
           <div>
             <h3 className="text-lg font-semibold text-slate-900">{provider.name}</h3>
@@ -33,7 +33,7 @@ export function ProviderCard({ provider, serviceName, distanceKm }: { provider: 
           <span className="rounded-lg bg-slate-100 px-2.5 py-2">{provider.completedJobs} jobs</span>
           <span className="rounded-lg bg-slate-100 px-2.5 py-2">{reviewCount} reviews</span>
           <span className="rounded-lg bg-slate-100 px-2.5 py-2">{provider.typicalChargeRange ?? 'Charge range pending'}</span>
-          <span className="rounded-lg bg-slate-100 px-2.5 py-2">{provider.isAvailable === false ? 'Currently unavailable' : provider.availability}</span>
+          <span className="col-span-2 rounded-lg bg-slate-100 px-2.5 py-2">{provider.isAvailable === false ? 'Currently unavailable' : provider.availability}</span>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -47,13 +47,13 @@ export function ProviderCard({ provider, serviceName, distanceKm }: { provider: 
         <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <HireButton
             href={`/request?service=${provider.serviceCategory}&provider=${encodeURIComponent(provider.slug)}`}
-            className="focus-ring rounded-lg bg-[#D71920] px-3 py-2 text-center text-sm font-medium text-white transition hover:bg-[#A80F1A]"
+            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-[#D71920] px-3 py-2 text-center text-sm font-medium text-white transition hover:bg-[#A80F1A]"
           >
             Hire this pro
           </HireButton>
           <Link
             href={`/providers/${provider.slug}`}
-            className="focus-ring rounded-lg border border-[#fecdd3] bg-[#fff1f2] px-3 py-2 text-center text-sm font-medium text-[#7f1d1d] transition hover:bg-[#ffe4e6]"
+            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg border border-[#fecdd3] bg-[#fff1f2] px-3 py-2 text-center text-sm font-medium text-[#7f1d1d] transition hover:bg-[#ffe4e6]"
           >
             View profile
           </Link>

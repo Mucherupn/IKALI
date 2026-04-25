@@ -13,7 +13,7 @@ const links = [
 export function Navbar() {
   return (
     <header className="sticky top-0 z-50 bg-[var(--red)] text-white shadow-[0_10px_35px_rgba(225,29,46,0.22)]">
-      <div className="section-shell flex min-h-[78px] items-center justify-between gap-6">
+      <div className="section-shell flex min-h-[72px] items-center justify-between gap-3 py-2 sm:min-h-[78px]">
         {/* Logo */}
         <Link
           href="/"
@@ -34,7 +34,7 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden items-center gap-7 md:flex">
+        <nav className="hidden items-center gap-6 lg:flex">
           {links.map((link) => (
             <Link
               key={link.href}
@@ -49,7 +49,7 @@ export function Navbar() {
         {/* CTA */}
         <Link
           href="/request"
-          className="focus-ring group inline-flex items-center rounded-full bg-black px-6 py-3 text-sm font-semibold shadow-[0_10px_25px_rgba(0,0,0,0.18)] transition hover:bg-white"
+          className="focus-ring group inline-flex min-h-11 items-center rounded-full bg-black px-4 py-2.5 text-sm font-semibold shadow-[0_10px_25px_rgba(0,0,0,0.18)] transition hover:bg-white sm:px-6 sm:py-3"
         >
           <span className="text-white transition group-hover:!text-black">
             Request service
@@ -58,12 +58,12 @@ export function Navbar() {
       </div>
 
       {/* Mobile Nav */}
-      <nav className="section-shell flex gap-5 overflow-x-auto pb-3 text-sm md:hidden">
+      <nav className="section-shell flex gap-4 overflow-x-auto pb-3 text-sm lg:hidden">
         {links.map((link) => (
           <Link
             key={link.href}
             href={link.href}
-            className="focus-ring shrink-0 rounded-md font-medium text-white/90 transition hover:text-white"
+            className="focus-ring shrink-0 rounded-md py-1.5 font-medium text-white/90 transition hover:text-white"
           >
             {link.label}
           </Link>
