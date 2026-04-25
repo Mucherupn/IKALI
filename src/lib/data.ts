@@ -41,6 +41,11 @@ function normalizeProvider(provider: {
   latitude?: number | null;
   longitude?: number | null;
   is_available?: boolean | null;
+  commission_override?: boolean;
+  unpaidBalance?: number;
+  paymentSpeedScore?: number;
+  providerStanding?: Provider['providerStanding'];
+  jobsAllowedBeforePayment?: number;
 }): Provider {
   return {
     id: provider.id,
@@ -63,6 +68,11 @@ function normalizeProvider(provider: {
     latitude: provider.latitude ?? undefined,
     longitude: provider.longitude ?? undefined,
     isAvailable: provider.is_available ?? undefined,
+    unpaidBalance: provider.unpaidBalance ?? 0,
+    paymentSpeedScore: provider.paymentSpeedScore ?? 0,
+    providerStanding: provider.providerStanding ?? 'good_standing',
+    jobsAllowedBeforePayment: provider.jobsAllowedBeforePayment ?? 2,
+    adminOverride: provider.commission_override ?? false,
     phoneVerified: provider.is_verified,
     experienceChecked: provider.years_experience > 0,
     workHistoryReviewed: provider.completed_jobs > 0,
@@ -118,12 +128,14 @@ export async function getProviders(): Promise<Provider[]> {
       }
     }
 
-    const [reviewsRes, jobsRes, completionsRes] = await Promise.all([
+    const [reviewsRes, jobsRes, completionsRes, accountsRes, ledgerRes] = await Promise.all([
       supabase.from('reviews').select('reviewee_id, rating, reviewer_role').eq('reviewer_role', 'customer'),
       supabase.from('job_requests').select('id, provider_id'),
-      supabase.from('job_completions').select('job_request_id, final_amount_used')
+      supabase.from('job_completions').select('job_request_id, final_amount_used'),
+      supabase.from('provider_accounts').select('provider_id, commission_balance, credit_balance, jobs_allowed_before_payment, status'),
+      supabase.from('provider_ledger').select('provider_id, type, created_at')
     ]);
-    if (reviewsRes.error || jobsRes.error || completionsRes.error) {
+    if (reviewsRes.error || jobsRes.error || completionsRes.error || accountsRes.error || ledgerRes.error) {
       return mockProviders;
     }
 
@@ -149,6 +161,35 @@ export async function getProviders(): Promise<Provider[]> {
       completionAmountsByProvider.set(providerId, current);
     }
 
+    const accountByProvider = new Map(
+      (accountsRes.data ?? []).map((account) => [
+        account.provider_id,
+        {
+          unpaidBalance: Math.max(Number(account.commission_balance ?? 0) - Number(account.credit_balance ?? 0), 0),
+          jobsAllowedBeforePayment: account.jobs_allowed_before_payment ?? 2,
+          providerStanding: (account.status as Provider['providerStanding']) ?? 'good_standing'
+        }
+      ])
+    );
+
+    const paymentSpeedScoreByProvider = new Map<string, number>();
+    const paymentDaysByProvider = new Map<string, number[]>();
+    const now = Date.now();
+    for (const entry of ledgerRes.data ?? []) {
+      if (entry.type !== 'payment_received') continue;
+      const createdAtTime = new Date(entry.created_at).getTime();
+      if (!Number.isFinite(createdAtTime)) continue;
+      const days = Math.max((now - createdAtTime) / (1000 * 60 * 60 * 24), 0);
+      const current = paymentDaysByProvider.get(entry.provider_id) ?? [];
+      current.push(days);
+      paymentDaysByProvider.set(entry.provider_id, current);
+    }
+    for (const [providerId, paymentDays] of paymentDaysByProvider.entries()) {
+      const averageDays = paymentDays.reduce((sum, value) => sum + value, 0) / paymentDays.length;
+      const score = 1 / (1 + averageDays);
+      paymentSpeedScoreByProvider.set(providerId, Number.isFinite(score) ? score : 0);
+    }
+
     const mapped = providerRows
       .map((provider) => {
         const serviceSlug = providerToServiceSlug.get(provider.id);
@@ -167,7 +208,11 @@ export async function getProviders(): Promise<Provider[]> {
           serviceSlug,
           reviews: reviewCount,
           ratingAverage: reviewAvg,
-          typicalChargeRange
+          typicalChargeRange,
+          unpaidBalance: accountByProvider.get(provider.id)?.unpaidBalance ?? 0,
+          paymentSpeedScore: paymentSpeedScoreByProvider.get(provider.id) ?? 0,
+          providerStanding: accountByProvider.get(provider.id)?.providerStanding ?? 'good_standing',
+          jobsAllowedBeforePayment: accountByProvider.get(provider.id)?.jobsAllowedBeforePayment ?? 2
         });
       })
       .filter((provider): provider is Provider => provider !== null);

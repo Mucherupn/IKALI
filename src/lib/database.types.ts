@@ -57,6 +57,7 @@ export type Database = {
           price_guide: string | null;
           availability_text: string | null;
           is_featured: boolean;
+          commission_override: boolean;
           created_at: string;
         },
         {
@@ -76,6 +77,7 @@ export type Database = {
           price_guide?: string | null;
           availability_text?: string | null;
           is_featured?: boolean;
+          commission_override?: boolean;
           created_at?: string;
         },
         {
@@ -95,6 +97,7 @@ export type Database = {
           price_guide?: string | null;
           availability_text?: string | null;
           is_featured?: boolean;
+          commission_override?: boolean;
           created_at?: string;
         }
       >;
@@ -233,6 +236,64 @@ export type Database = {
           created_at?: string;
         }
       >;
+      provider_accounts: TableDef<
+        {
+          provider_id: string;
+          commission_balance: number;
+          credit_balance: number;
+          jobs_allowed_before_payment: number;
+          status: string;
+          updated_at: string;
+        },
+        {
+          provider_id: string;
+          commission_balance?: number;
+          credit_balance?: number;
+          jobs_allowed_before_payment?: number;
+          status?: string;
+          updated_at?: string;
+        },
+        {
+          provider_id?: string;
+          commission_balance?: number;
+          credit_balance?: number;
+          jobs_allowed_before_payment?: number;
+          status?: string;
+          updated_at?: string;
+        }
+      >;
+      provider_ledger: TableDef<
+        {
+          id: string;
+          provider_id: string;
+          job_request_id: string | null;
+          type: Database['public']['Enums']['provider_ledger_type'];
+          amount: number;
+          balance_after: number;
+          description: string | null;
+          created_at: string;
+        },
+        {
+          id?: string;
+          provider_id: string;
+          job_request_id?: string | null;
+          type: Database['public']['Enums']['provider_ledger_type'];
+          amount: number;
+          balance_after: number;
+          description?: string | null;
+          created_at?: string;
+        },
+        {
+          id?: string;
+          provider_id?: string;
+          job_request_id?: string | null;
+          type?: Database['public']['Enums']['provider_ledger_type'];
+          amount?: number;
+          balance_after?: number;
+          description?: string | null;
+          created_at?: string;
+        }
+      >;
       profiles: TableDef<
         {
           id: string;
@@ -306,7 +367,9 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
-    Enums: Record<string, never>;
+    Enums: {
+      provider_ledger_type: 'commission_due' | 'payment_received' | 'adjustment' | 'credit_applied' | 'penalty';
+    };
     CompositeTypes: Record<string, never>;
   };
 };
