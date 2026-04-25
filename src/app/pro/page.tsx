@@ -8,6 +8,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 type AccessState = 'loading' | 'unauthenticated' | 'forbidden' | 'allowed';
 type ProviderStatus = 'available' | 'engaged' | 'restricted';
 type JobRequestRow = Database['public']['Tables']['job_requests']['Row'];
+type JobCompletionRow = Database['public']['Tables']['job_completions']['Row'];
 type ProviderRow = Database['public']['Tables']['providers']['Row'];
 type ServiceCategoryRow = Database['public']['Tables']['service_categories']['Row'];
 
@@ -21,6 +22,19 @@ type ProfileForm = {
 };
 
 const COMMISSION_RATE = 0.1;
+const SIGNIFICANT_DIFFERENCE_THRESHOLD = 500;
+
+type ProviderCompletionForm = {
+  amountCharged: string;
+  customerRating: string;
+  lowRatingReason: string;
+};
+
+const INITIAL_PROVIDER_COMPLETION_FORM: ProviderCompletionForm = {
+  amountCharged: '',
+  customerRating: '',
+  lowRatingReason: ''
+};
 
 function toBookingStatus(status: string) {
   if (status === 'new' || status === 'pending') return 'requested';
@@ -56,12 +70,14 @@ export default function ProPage() {
 
   const [provider, setProvider] = useState<ProviderRow | null>(null);
   const [allJobs, setAllJobs] = useState<JobRequestRow[]>([]);
+  const [jobCompletionsByJobId, setJobCompletionsByJobId] = useState<Record<string, JobCompletionRow>>({});
   const [categories, setCategories] = useState<ServiceCategoryRow[]>([]);
   const [serviceCategoryIds, setServiceCategoryIds] = useState<string[]>([]);
 
   const [declineReasonByJob, setDeclineReasonByJob] = useState<Record<string, string>>({});
   const [dropReason, setDropReason] = useState('');
   const [manualPaymentMessage, setManualPaymentMessage] = useState('');
+  const [providerCompletionFormByJob, setProviderCompletionFormByJob] = useState<Record<string, ProviderCompletionForm>>({});
 
   const [profileForm, setProfileForm] = useState<ProfileForm>({
     bio: '',
@@ -120,18 +136,24 @@ export default function ProPage() {
         return;
       }
 
-      const [providerServicesRes, jobsRes] = await Promise.all([
+      const [providerServicesRes, jobsRes, completionsRes] = await Promise.all([
         supabase.from('provider_services').select('service_category_id').eq('provider_id', providerRow.id),
-        supabase.from('job_requests').select('*').order('created_at', { ascending: false })
+        supabase.from('job_requests').select('*').order('created_at', { ascending: false }),
+        supabase.from('job_completions').select('*')
       ]);
 
-      if (providerServicesRes.error || jobsRes.error) {
-        throw providerServicesRes.error ?? jobsRes.error;
+      if (providerServicesRes.error || jobsRes.error || completionsRes.error) {
+        throw providerServicesRes.error ?? jobsRes.error ?? completionsRes.error;
       }
 
       const selectedIds = (providerServicesRes.data ?? []).map((item) => item.service_category_id);
       setServiceCategoryIds(selectedIds);
       setAllJobs(jobsRes.data ?? []);
+      const completionLookup: Record<string, JobCompletionRow> = {};
+      for (const completion of completionsRes.data ?? []) {
+        completionLookup[completion.job_request_id] = completion;
+      }
+      setJobCompletionsByJobId(completionLookup);
 
       setProfileForm((current) => ({
         ...current,
@@ -202,15 +224,26 @@ export default function ProPage() {
   }, [provider, activeJob]);
 
   const paymentSummary = useMemo(() => {
-    const completedRevenue = completedJobs.reduce((total, job) => total + Number(job.payment_amount ?? 0), 0);
+    const completedRevenue = completedJobs.reduce((total, job) => {
+      const completion = jobCompletionsByJobId[job.id];
+      return total + Number(completion?.final_amount_used ?? completion?.provider_reported_amount ?? job.payment_amount ?? 0);
+    }, 0);
 
     const commissionsPaid = completedJobs
       .filter((job) => job.payment_status === 'paid')
-      .reduce((total, job) => total + Number(job.payment_amount ?? 0) * COMMISSION_RATE, 0);
+      .reduce((total, job) => {
+        const completion = jobCompletionsByJobId[job.id];
+        const amount = Number(completion?.final_amount_used ?? completion?.provider_reported_amount ?? job.payment_amount ?? 0);
+        return total + amount * COMMISSION_RATE;
+      }, 0);
 
     const commissionsOwed = completedJobs
       .filter((job) => job.payment_status !== 'paid')
-      .reduce((total, job) => total + Number(job.payment_amount ?? 0) * COMMISSION_RATE, 0);
+      .reduce((total, job) => {
+        const completion = jobCompletionsByJobId[job.id];
+        const amount = Number(completion?.final_amount_used ?? completion?.provider_reported_amount ?? job.payment_amount ?? 0);
+        return total + amount * COMMISSION_RATE;
+      }, 0);
 
     const accountBalance = completedRevenue - completedRevenue * COMMISSION_RATE;
 
@@ -220,7 +253,7 @@ export default function ProPage() {
       commissionsPaid,
       accountBalance
     };
-  }, [completedJobs]);
+  }, [completedJobs, jobCompletionsByJobId]);
 
   const serviceNameById = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
 
@@ -317,15 +350,74 @@ export default function ProPage() {
     );
   }
 
-  async function onMarkCompleted(jobId: string) {
-    await updateJob(
-      jobId,
-      {
-        status: 'completed',
-        completed_at: new Date().toISOString()
-      },
-      'Active job marked as completed.'
-    );
+  async function onMarkCompleted(job: JobRequestRow) {
+    if (!provider || !job.customer_id) return;
+    const form = providerCompletionFormByJob[job.id] ?? INITIAL_PROVIDER_COMPLETION_FORM;
+    const amountCharged = Number(form.amountCharged);
+    const rating = Number(form.customerRating);
+    const lowRating = rating > 0 && rating <= 2;
+
+    if (!Number.isFinite(amountCharged) || amountCharged < 0) {
+      setErrorMessage('Please provide a valid amount charged before completing the job.');
+      return;
+    }
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      setErrorMessage('Please provide a customer rating between 1 and 5.');
+      return;
+    }
+    if (lowRating && !form.lowRatingReason.trim()) {
+      setErrorMessage('Please add a reason for ratings of 2 stars or lower.');
+      return;
+    }
+
+    try {
+      setBusyAction(job.id);
+      setErrorMessage('');
+      setStatusMessage('');
+      const supabase = getSupabaseClient();
+      const existingCompletion = jobCompletionsByJobId[job.id];
+      const customerAmount = Number(existingCompletion?.customer_reported_amount ?? NaN);
+      const difference = Number.isFinite(customerAmount) ? Math.abs(amountCharged - customerAmount) : null;
+      const isFlagged = difference != null && difference > Math.max(SIGNIFICANT_DIFFERENCE_THRESHOLD, amountCharged * 0.2);
+
+      const reviewComment = [lowRating ? `Low-rating reason: ${form.lowRatingReason.trim()}` : ''].filter(Boolean).join(' ').trim();
+
+      const [jobRes, completionRes, reviewRes] = await Promise.all([
+        supabase
+          .from('job_requests')
+          .update({
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+            payment_amount: amountCharged
+          })
+          .eq('id', job.id),
+        supabase.from('job_completions').upsert({
+          job_request_id: job.id,
+          provider_reported_amount: amountCharged,
+          customer_reported_amount: Number.isFinite(customerAmount) ? customerAmount : null,
+          final_amount_used: amountCharged,
+          amount_difference: difference,
+          is_flagged: isFlagged
+        }),
+        supabase.from('reviews').insert({
+          job_request_id: job.id,
+          reviewer_id: provider.id,
+          reviewee_id: job.customer_id,
+          reviewer_role: 'provider',
+          rating,
+          comment: reviewComment || null
+        })
+      ]);
+
+      if (jobRes.error || completionRes.error || reviewRes.error) throw jobRes.error ?? completionRes.error ?? reviewRes.error;
+
+      setStatusMessage(isFlagged ? 'Job completed and flagged for admin amount review.' : 'Active job marked as completed.');
+      await loadDashboard();
+    } catch {
+      setErrorMessage('Could not complete this job. Please try again.');
+    } finally {
+      setBusyAction('');
+    }
   }
 
   async function onDropJob(jobId: string) {
@@ -595,10 +687,81 @@ export default function ProPage() {
                 <button className="focus-ring btn btn-secondary" disabled={busyAction === activeJob.id} onClick={() => onMarkStarted(activeJob.id)} type="button">
                   Mark started
                 </button>
-                <button className="focus-ring btn btn-primary" disabled={busyAction === activeJob.id} onClick={() => onMarkCompleted(activeJob.id)} type="button">
-                  Mark completed
-                </button>
               </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Amount charged (KES)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={(providerCompletionFormByJob[activeJob.id] ?? INITIAL_PROVIDER_COMPLETION_FORM).amountCharged}
+                    onChange={(event) =>
+                      setProviderCompletionFormByJob((current) => ({
+                        ...current,
+                        [activeJob.id]: {
+                          ...(current[activeJob.id] ?? INITIAL_PROVIDER_COMPLETION_FORM),
+                          amountCharged: event.target.value
+                        }
+                      }))
+                    }
+                    className="focus-ring input-field"
+                    placeholder="Enter amount charged"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Customer rating</span>
+                  <select
+                    value={(providerCompletionFormByJob[activeJob.id] ?? INITIAL_PROVIDER_COMPLETION_FORM).customerRating}
+                    onChange={(event) =>
+                      setProviderCompletionFormByJob((current) => ({
+                        ...current,
+                        [activeJob.id]: {
+                          ...(current[activeJob.id] ?? INITIAL_PROVIDER_COMPLETION_FORM),
+                          customerRating: event.target.value
+                        }
+                      }))
+                    }
+                    className="focus-ring input-field"
+                  >
+                    <option value="">Select rating</option>
+                    {[5, 4, 3, 2, 1].map((value) => (
+                      <option key={value} value={value}>
+                        {value} star{value > 1 ? 's' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {(() => {
+                  const rating = Number((providerCompletionFormByJob[activeJob.id] ?? INITIAL_PROVIDER_COMPLETION_FORM).customerRating);
+                  const mustExplain = rating > 0 && rating <= 2;
+                  if (!mustExplain) return null;
+                  return (
+                    <label className="block sm:col-span-2">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-red-700">Reason for low customer rating</span>
+                      <textarea
+                        value={(providerCompletionFormByJob[activeJob.id] ?? INITIAL_PROVIDER_COMPLETION_FORM).lowRatingReason}
+                        onChange={(event) =>
+                          setProviderCompletionFormByJob((current) => ({
+                            ...current,
+                            [activeJob.id]: {
+                              ...(current[activeJob.id] ?? INITIAL_PROVIDER_COMPLETION_FORM),
+                              lowRatingReason: event.target.value
+                            }
+                          }))
+                        }
+                        className="focus-ring input-field min-h-20"
+                        placeholder="Explain the low rating"
+                      />
+                    </label>
+                  );
+                })()}
+              </div>
+              <button className="focus-ring btn btn-primary mt-3" disabled={busyAction === activeJob.id} onClick={() => onMarkCompleted(activeJob)} type="button">
+                Mark completed
+              </button>
 
               <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
                 <input

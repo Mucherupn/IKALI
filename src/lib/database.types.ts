@@ -201,6 +201,38 @@ export type Database = {
           created_at?: string;
         }
       >;
+      job_completions: TableDef<
+        {
+          id: string;
+          job_request_id: string;
+          provider_reported_amount: number | null;
+          customer_reported_amount: number | null;
+          final_amount_used: number | null;
+          amount_difference: number | null;
+          is_flagged: boolean;
+          created_at: string;
+        },
+        {
+          id?: string;
+          job_request_id: string;
+          provider_reported_amount?: number | null;
+          customer_reported_amount?: number | null;
+          final_amount_used?: number | null;
+          amount_difference?: number | null;
+          is_flagged?: boolean;
+          created_at?: string;
+        },
+        {
+          id?: string;
+          job_request_id?: string;
+          provider_reported_amount?: number | null;
+          customer_reported_amount?: number | null;
+          final_amount_used?: number | null;
+          amount_difference?: number | null;
+          is_flagged?: boolean;
+          created_at?: string;
+        }
+      >;
       profiles: TableDef<
         {
           id: string;
@@ -242,24 +274,30 @@ export type Database = {
       reviews: TableDef<
         {
           id: string;
-          provider_id: string;
-          customer_name: string;
+          job_request_id: string;
+          reviewer_id: string;
+          reviewee_id: string;
+          reviewer_role: string;
           rating: number;
           comment: string | null;
           created_at: string;
         },
         {
           id?: string;
-          provider_id: string;
-          customer_name: string;
+          job_request_id: string;
+          reviewer_id: string;
+          reviewee_id: string;
+          reviewer_role: string;
           rating: number;
           comment?: string | null;
           created_at?: string;
         },
         {
           id?: string;
-          provider_id?: string;
-          customer_name?: string;
+          job_request_id?: string;
+          reviewer_id?: string;
+          reviewee_id?: string;
+          reviewer_role?: string;
           rating?: number;
           comment?: string | null;
           created_at?: string;
