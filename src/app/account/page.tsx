@@ -1,83 +1,62 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { isValidUserRole, USER_ROLES, UserRole } from '@/lib/auth';
+import { useEffect, useMemo, useState } from 'react';
+import { Database } from '@/lib/database.types';
 import { getSupabaseClient } from '@/lib/supabase';
 
-type ProfileForm = {
-  role: UserRole;
-  full_name: string;
-  phone: string;
-  email: string;
-  default_location: string;
-  latitude: string;
-  longitude: string;
+type AccessState = 'loading' | 'unauthenticated' | 'forbidden' | 'allowed';
+type JobRequestRow = Database['public']['Tables']['job_requests']['Row'];
+type ProviderRow = Database['public']['Tables']['providers']['Row'];
+type ServiceCategoryRow = Database['public']['Tables']['service_categories']['Row'];
+type ReviewRow = Database['public']['Tables']['reviews']['Row'];
+
+type CompletionForm = {
+  rating: string;
+  review: string;
+  explanation: string;
+  amountPaid: string;
 };
 
-const initialForm: ProfileForm = {
-  role: 'customer',
-  full_name: '',
-  phone: '',
-  email: '',
-  default_location: '',
-  latitude: '',
-  longitude: ''
+const INITIAL_COMPLETION_FORM: CompletionForm = {
+  rating: '',
+  review: '',
+  explanation: '',
+  amountPaid: ''
 };
+
+function toBookingStatus(status: string) {
+  if (status === 'new' || status === 'pending') return 'requested';
+  if (status === 'contacted') return 'accepted';
+  if (status === 'assigned') return 'in_progress';
+  return status;
+}
+
+function canExposeProviderPhone(job: JobRequestRow, provider: ProviderRow | null) {
+  const status = toBookingStatus(job.status);
+  const isAcceptedJourney = status === 'accepted' || status === 'in_progress' || status === 'completed';
+  return Boolean(isAcceptedJourney && provider?.is_verified);
+}
 
 export default function AccountPage() {
-  const router = useRouter();
-  const [formData, setFormData] = useState<ProfileForm>(initialForm);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('');
+  const [accessState, setAccessState] = useState<AccessState>('loading');
+  const [loading, setLoading] = useState(true);
+  const [busyAction, setBusyAction] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
 
-  useEffect(() => {
-    let isMounted = true;
+  const [customerName, setCustomerName] = useState('Customer');
+  const [jobs, setJobs] = useState<JobRequestRow[]>([]);
+  const [providersById, setProvidersById] = useState<Record<string, ProviderRow>>({});
+  const [serviceNameById, setServiceNameById] = useState<Record<string, string>>({});
+  const [reviewsByProvider, setReviewsByProvider] = useState<Record<string, ReviewRow>>({});
 
-    async function loadProfile() {
-      const supabase = getSupabaseClient();
-      const {
-        data: { session }
-      } = await supabase.auth.getSession();
+  const [dropReasonByJob, setDropReasonByJob] = useState<Record<string, string>>({});
+  const [completionFormByJob, setCompletionFormByJob] = useState<Record<string, CompletionForm>>({});
 
-      if (!session?.user) {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
-
-      if (!isMounted) return;
-
-      setFormData({
-        role: isValidUserRole(profile?.role) ? profile.role : 'customer',
-        full_name: profile?.full_name ?? '',
-        phone: profile?.phone ?? '',
-        email: profile?.email ?? session.user.email ?? '',
-        default_location: profile?.default_location ?? '',
-        latitude: profile?.latitude?.toString() ?? '',
-        longitude: profile?.longitude?.toString() ?? ''
-      });
-      setIsLoading(false);
-    }
-
-    loadProfile();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const onSave = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  async function loadDashboard() {
+    setLoading(true);
     setErrorMessage('');
-    setStatusMessage('');
-    setIsSaving(true);
 
     try {
       const supabase = getSupabaseClient();
@@ -86,147 +65,494 @@ export default function AccountPage() {
       } = await supabase.auth.getSession();
 
       if (!session?.user) {
-        throw new Error('No user session');
+        setAccessState('unauthenticated');
+        setLoading(false);
+        return;
       }
 
-      const payload = {
-        id: session.user.id,
-        role: formData.role,
-        full_name: formData.full_name.trim() || null,
-        phone: formData.phone.trim() || null,
-        email: formData.email.trim() || session.user.email || null,
-        default_location: formData.default_location.trim() || null,
-        latitude: formData.latitude ? Number(formData.latitude) : null,
-        longitude: formData.longitude ? Number(formData.longitude) : null,
-        updated_at: new Date().toISOString()
-      };
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, full_name, email')
+        .eq('id', session.user.id)
+        .maybeSingle();
 
-      const { error } = await supabase.from('profiles').upsert(payload);
+      if (profile?.role !== 'customer') {
+        setAccessState('forbidden');
+        setLoading(false);
+        return;
+      }
+
+      setAccessState('allowed');
+      setCustomerName(profile?.full_name || profile?.email || session.user.email || 'Customer');
+
+      const [jobsRes, categoriesRes] = await Promise.all([
+        supabase.from('job_requests').select('*').eq('customer_id', session.user.id).order('created_at', { ascending: false }),
+        supabase.from('service_categories').select('*')
+      ]);
+
+      if (jobsRes.error || categoriesRes.error) {
+        throw jobsRes.error ?? categoriesRes.error;
+      }
+
+      const allJobs = jobsRes.data ?? [];
+      const providerIds = [...new Set(allJobs.map((job) => job.provider_id).filter(Boolean))] as string[];
+
+      const [providersRes, reviewsRes] = await Promise.all([
+        providerIds.length > 0 ? supabase.from('providers').select('*').in('id', providerIds) : Promise.resolve({ data: [], error: null }),
+        providerIds.length > 0 ? supabase.from('reviews').select('*').in('provider_id', providerIds).order('created_at', { ascending: false }) : Promise.resolve({ data: [], error: null })
+      ]);
+
+      if (providersRes.error || reviewsRes.error) {
+        throw providersRes.error ?? reviewsRes.error;
+      }
+
+      const providerLookup: Record<string, ProviderRow> = {};
+      (providersRes.data ?? []).forEach((provider) => {
+        providerLookup[provider.id] = provider;
+      });
+
+      const categoryLookup: Record<string, string> = {};
+      (categoriesRes.data ?? []).forEach((category: ServiceCategoryRow) => {
+        categoryLookup[category.id] = category.name;
+      });
+
+      const latestReviewByProvider: Record<string, ReviewRow> = {};
+      for (const review of reviewsRes.data ?? []) {
+        if (review.customer_name !== (profile?.full_name || profile?.email || session.user.email || 'Customer')) {
+          continue;
+        }
+        if (!latestReviewByProvider[review.provider_id]) {
+          latestReviewByProvider[review.provider_id] = review;
+        }
+      }
+
+      setJobs(allJobs);
+      setProvidersById(providerLookup);
+      setServiceNameById(categoryLookup);
+      setReviewsByProvider(latestReviewByProvider);
+
+      const completionDefaults: Record<string, CompletionForm> = {};
+      allJobs.forEach((job) => {
+        const existingReview = job.provider_id ? latestReviewByProvider[job.provider_id] : undefined;
+        completionDefaults[job.id] = {
+          rating: existingReview?.rating ? String(existingReview.rating) : '',
+          review: existingReview?.comment ?? '',
+          explanation: '',
+          amountPaid: job.payment_amount != null ? String(job.payment_amount) : ''
+        };
+      });
+      setCompletionFormByJob(completionDefaults);
+    } catch {
+      setErrorMessage('Unable to load your customer account right now. Please try again shortly.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  const activeRequests = useMemo(() => jobs.filter((job) => toBookingStatus(job.status) === 'requested'), [jobs]);
+  const acceptedJobs = useMemo(
+    () => jobs.filter((job) => {
+      const status = toBookingStatus(job.status);
+      return status === 'accepted' || status === 'in_progress';
+    }),
+    [jobs]
+  );
+  const completedJobs = useMemo(() => jobs.filter((job) => toBookingStatus(job.status) === 'completed'), [jobs]);
+
+  async function updateJob(jobId: string, patch: Database['public']['Tables']['job_requests']['Update'], doneMessage: string) {
+    try {
+      setBusyAction(jobId);
+      setErrorMessage('');
+      setStatusMessage('');
+
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.from('job_requests').update(patch).eq('id', jobId);
       if (error) throw error;
 
-      setStatusMessage('Profile updated successfully.');
+      setStatusMessage(doneMessage);
+      await loadDashboard();
     } catch {
-      setErrorMessage('Unable to save profile right now. Please try again.');
+      setErrorMessage('Could not update this job. Please try again.');
     } finally {
-      setIsSaving(false);
+      setBusyAction('');
     }
-  };
+  }
 
-  const onSignOut = async () => {
-    const supabase = getSupabaseClient();
-    await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
-  };
+  async function onCancelRequest(job: JobRequestRow) {
+    await updateJob(
+      job.id,
+      {
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        cancel_reason: 'Cancelled by customer before provider acceptance.'
+      },
+      'Request cancelled.'
+    );
+  }
 
-  if (isLoading) {
+  async function onDropProvider(job: JobRequestRow) {
+    const reason = (dropReasonByJob[job.id] ?? '').trim();
+    if (!reason) {
+      setErrorMessage('Please provide a reason before dropping the provider.');
+      return;
+    }
+
+    await updateJob(
+      job.id,
+      {
+        status: 'pending',
+        provider_id: null,
+        accepted_at: null,
+        started_at: null,
+        cancel_reason: `Customer dropped provider: ${reason}`,
+        cancelled_at: null
+      },
+      'Provider dropped. Your request is now active again.'
+    );
+  }
+
+  async function onMarkComplete(job: JobRequestRow) {
+    await updateJob(
+      job.id,
+      {
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      },
+      'Job marked as completed. You can now rate your provider.'
+    );
+  }
+
+  async function onSaveFeedback(job: JobRequestRow) {
+    const form = completionFormByJob[job.id] ?? INITIAL_COMPLETION_FORM;
+    const rating = Number(form.rating);
+    const amountPaid = Number(form.amountPaid);
+    const isLowRating = rating > 0 && rating <= 2;
+
+    if (!job.provider_id) {
+      setErrorMessage('Cannot save feedback because no provider is attached to this job.');
+      return;
+    }
+
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      setErrorMessage('Please choose a rating between 1 and 5 stars.');
+      return;
+    }
+
+    if (!Number.isFinite(amountPaid) || amountPaid < 0) {
+      setErrorMessage('Please enter a valid amount paid (0 or greater).');
+      return;
+    }
+
+    if (isLowRating && !form.explanation.trim()) {
+      setErrorMessage('An explanation is required for ratings of 2 stars or lower.');
+      return;
+    }
+
+    try {
+      setBusyAction(job.id);
+      setErrorMessage('');
+      setStatusMessage('');
+
+      const supabase = getSupabaseClient();
+
+      const comment = [form.review.trim(), isLowRating ? `Low-rating explanation: ${form.explanation.trim()}` : '']
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+
+      const reviewPayload: Database['public']['Tables']['reviews']['Insert'] = {
+        provider_id: job.provider_id,
+        customer_name: customerName,
+        rating,
+        comment: comment || null
+      };
+
+      const [reviewRes, jobRes] = await Promise.all([
+        supabase.from('reviews').insert(reviewPayload),
+        supabase
+          .from('job_requests')
+          .update({
+            payment_amount: amountPaid,
+            payment_status: amountPaid > 0 ? 'paid' : 'unpaid',
+            paid_at: amountPaid > 0 ? new Date().toISOString() : null
+          })
+          .eq('id', job.id)
+      ]);
+
+      if (reviewRes.error || jobRes.error) {
+        throw reviewRes.error ?? jobRes.error;
+      }
+
+      setStatusMessage('Thanks! Your rating and payment details were saved.');
+      await loadDashboard();
+    } catch {
+      setErrorMessage('Could not save your feedback right now. Please try again.');
+    } finally {
+      setBusyAction('');
+    }
+  }
+
+  if (loading || accessState === 'loading') {
+    return (
+      <div className="section-shell max-w-6xl py-10">
+        <section className="card-premium p-6">Loading your customer account...</section>
+      </div>
+    );
+  }
+
+  if (accessState === 'unauthenticated') {
     return (
       <div className="section-shell max-w-2xl py-10">
-        <section className="card-premium p-6">Loading your account...</section>
+        <section className="card-premium p-6 sm:p-8">
+          <p className="eyebrow">Customer account</p>
+          <h1 className="page-title mt-2">Please sign in</h1>
+          <p className="mt-3 text-sm text-slate-600">Only logged-in customers can access this page.</p>
+          <Link href="/login" className="focus-ring btn btn-primary mt-6">
+            Go to login
+          </Link>
+        </section>
+      </div>
+    );
+  }
+
+  if (accessState === 'forbidden') {
+    return (
+      <div className="section-shell max-w-2xl py-10">
+        <section className="card-premium p-6 sm:p-8">
+          <p className="eyebrow">Customer account</p>
+          <h1 className="page-title mt-2">Customer access only</h1>
+          <p className="mt-3 text-sm text-slate-600">Your profile is not set as a customer account, so this page is hidden.</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/account" className="focus-ring btn btn-secondary">
+              Profile settings
+            </Link>
+            <Link href="/pro" className="focus-ring btn btn-primary">
+              Provider hub
+            </Link>
+          </div>
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="section-shell max-w-2xl py-10">
+    <div className="section-shell max-w-6xl py-10 space-y-6">
       <section className="card-premium p-6 sm:p-8">
-        <p className="eyebrow">Account</p>
-        <h1 className="page-title mt-2">Profile settings</h1>
+        <p className="eyebrow">Customer account</p>
+        <h1 className="page-title mt-2">My jobs and requests</h1>
+        <p className="mt-2 text-sm text-slate-600">Track active requests, accepted jobs, completed work, and your provider feedback.</p>
 
-        <form className="mt-6 space-y-4" onSubmit={onSave}>
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">Role</span>
-            <select
-              value={formData.role}
-              onChange={(event) => setFormData((current) => ({ ...current, role: event.target.value as UserRole }))}
-              className="focus-ring input-field"
-            >
-              {USER_ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
-          </label>
+        {errorMessage ? <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{errorMessage}</p> : null}
+        {statusMessage ? <p className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700 ring-1 ring-emerald-100">{statusMessage}</p> : null}
+      </section>
 
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">Full name</span>
-            <input
-              value={formData.full_name}
-              onChange={(event) => setFormData((current) => ({ ...current, full_name: event.target.value }))}
-              className="focus-ring input-field"
-            />
-          </label>
+      <section className="card p-5 sm:p-6">
+        <h2 className="text-xl font-semibold text-slate-900">1. Active requests</h2>
+        <p className="mt-1 text-sm text-slate-600">Pending requests waiting for provider acceptance.</p>
+        <div className="mt-4 space-y-4">
+          {activeRequests.length === 0 ? (
+            <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 ring-1 ring-slate-200">No active requests.</p>
+          ) : (
+            activeRequests.map((job) => {
+              const provider = job.provider_id ? providersById[job.provider_id] : null;
+              return (
+                <article key={job.id} className="rounded-2xl border border-slate-200 p-4">
+                  <div className="grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+                    <p><span className="font-semibold text-slate-900">Requested provider:</span> {provider?.full_name ?? 'Any available provider'}</p>
+                    <p><span className="font-semibold text-slate-900">Status:</span> {toBookingStatus(job.status)}</p>
+                    <p><span className="font-semibold text-slate-900">Location:</span> {job.location}</p>
+                    <p><span className="font-semibold text-slate-900">Urgency:</span> {job.urgency ?? 'normal'}</p>
+                    <p className="sm:col-span-2"><span className="font-semibold text-slate-900">Description:</span> {job.description ?? 'No extra description provided.'}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onCancelRequest(job)}
+                    disabled={busyAction === job.id}
+                    className="focus-ring btn btn-secondary mt-4 disabled:opacity-60"
+                  >
+                    {busyAction === job.id ? 'Cancelling...' : 'Cancel request'}
+                  </button>
+                </article>
+              );
+            })
+          )}
+        </div>
+      </section>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">Phone</span>
-              <input
-                value={formData.phone}
-                onChange={(event) => setFormData((current) => ({ ...current, phone: event.target.value }))}
-                className="focus-ring input-field"
-              />
-            </label>
+      <section className="card p-5 sm:p-6">
+        <h2 className="text-xl font-semibold text-slate-900">2. Accepted jobs</h2>
+        <p className="mt-1 text-sm text-slate-600">Manage ongoing jobs with accepted providers.</p>
+        <div className="mt-4 space-y-4">
+          {acceptedJobs.length === 0 ? (
+            <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 ring-1 ring-slate-200">No accepted jobs right now.</p>
+          ) : (
+            acceptedJobs.map((job) => {
+              const provider = job.provider_id ? providersById[job.provider_id] : null;
+              const showProviderPhone = canExposeProviderPhone(job, provider);
+              return (
+                <article key={job.id} className="rounded-2xl border border-slate-200 p-4">
+                  <div className="grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+                    <p><span className="font-semibold text-slate-900">Provider name:</span> {provider?.full_name ?? 'Unknown provider'}</p>
+                    <p><span className="font-semibold text-slate-900">Status:</span> {toBookingStatus(job.status)}</p>
+                    <p><span className="font-semibold text-slate-900">Service:</span> {serviceNameById[job.service_category_id] ?? 'Service request'}</p>
+                    <p>
+                      <span className="font-semibold text-slate-900">Provider phone:</span>{' '}
+                      {showProviderPhone ? provider?.phone ?? 'Not available' : 'Hidden until accepted booking rules are satisfied'}
+                    </p>
+                  </div>
 
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">Email</span>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(event) => setFormData((current) => ({ ...current, email: event.target.value }))}
-                className="focus-ring input-field"
-              />
-            </label>
-          </div>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => onMarkComplete(job)}
+                      disabled={busyAction === job.id}
+                      className="focus-ring btn btn-primary disabled:opacity-60"
+                    >
+                      {busyAction === job.id ? 'Updating...' : 'Complete job'}
+                    </button>
+                  </div>
 
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">Default location</span>
-            <input
-              value={formData.default_location}
-              onChange={(event) => setFormData((current) => ({ ...current, default_location: event.target.value }))}
-              className="focus-ring input-field"
-            />
-          </label>
+                  <div className="mt-4">
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Drop provider reason</label>
+                    <input
+                      value={dropReasonByJob[job.id] ?? ''}
+                      onChange={(event) =>
+                        setDropReasonByJob((current) => ({
+                          ...current,
+                          [job.id]: event.target.value
+                        }))
+                      }
+                      className="focus-ring input-field"
+                      placeholder="Explain why you are dropping this provider"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => onDropProvider(job)}
+                      disabled={busyAction === job.id}
+                      className="focus-ring btn btn-secondary mt-2 disabled:opacity-60"
+                    >
+                      {busyAction === job.id ? 'Updating...' : 'Drop provider'}
+                    </button>
+                  </div>
+                </article>
+              );
+            })
+          )}
+        </div>
+      </section>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">Latitude</span>
-              <input
-                type="number"
-                step="any"
-                value={formData.latitude}
-                onChange={(event) => setFormData((current) => ({ ...current, latitude: event.target.value }))}
-                className="focus-ring input-field"
-              />
-            </label>
+      <section className="card p-5 sm:p-6">
+        <h2 className="text-xl font-semibold text-slate-900">3. Completed jobs</h2>
+        <p className="mt-1 text-sm text-slate-600">Provide a rating, optional review, and payment amount for completed jobs.</p>
+        <div className="mt-4 space-y-4">
+          {completedJobs.length === 0 ? (
+            <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 ring-1 ring-slate-200">No completed jobs yet.</p>
+          ) : (
+            completedJobs.map((job) => {
+              const provider = job.provider_id ? providersById[job.provider_id] : null;
+              const existingReview = job.provider_id ? reviewsByProvider[job.provider_id] : null;
+              const form = completionFormByJob[job.id] ?? INITIAL_COMPLETION_FORM;
+              const rating = Number(form.rating);
+              const mustExplain = rating > 0 && rating <= 2;
 
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">Longitude</span>
-              <input
-                type="number"
-                step="any"
-                value={formData.longitude}
-                onChange={(event) => setFormData((current) => ({ ...current, longitude: event.target.value }))}
-                className="focus-ring input-field"
-              />
-            </label>
-          </div>
+              return (
+                <article key={job.id} className="rounded-2xl border border-slate-200 p-4">
+                  <div className="grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+                    <p><span className="font-semibold text-slate-900">Provider:</span> {provider?.full_name ?? 'Unknown provider'}</p>
+                    <p><span className="font-semibold text-slate-900">Amount paid:</span> {job.payment_amount != null ? `KES ${job.payment_amount}` : 'Not recorded'}</p>
+                    <p><span className="font-semibold text-slate-900">Rating given:</span> {existingReview?.rating ? `${existingReview.rating} / 5` : 'Not yet rated'}</p>
+                    <p><span className="font-semibold text-slate-900">Review:</span> {existingReview?.comment ?? 'No review yet'}</p>
+                  </div>
 
-          {errorMessage ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{errorMessage}</p> : null}
-          {statusMessage ? <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700 ring-1 ring-emerald-100">{statusMessage}</p> : null}
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Rate provider</span>
+                      <select
+                        value={form.rating}
+                        onChange={(event) =>
+                          setCompletionFormByJob((current) => ({
+                            ...current,
+                            [job.id]: { ...form, rating: event.target.value }
+                          }))
+                        }
+                        className="focus-ring input-field"
+                      >
+                        <option value="">Select rating</option>
+                        {[5, 4, 3, 2, 1].map((value) => (
+                          <option key={value} value={value}>
+                            {value} star{value > 1 ? 's' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
 
-          <button type="submit" disabled={isSaving} className="focus-ring btn btn-primary min-h-11 w-full disabled:opacity-60">
-            {isSaving ? 'Saving profile...' : 'Save profile'}
-          </button>
-        </form>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Amount paid (KES)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={form.amountPaid}
+                        onChange={(event) =>
+                          setCompletionFormByJob((current) => ({
+                            ...current,
+                            [job.id]: { ...form, amountPaid: event.target.value }
+                          }))
+                        }
+                        className="focus-ring input-field"
+                        placeholder="Enter amount paid"
+                      />
+                    </label>
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button type="button" onClick={onSignOut} className="focus-ring btn btn-secondary">
-            Sign out
-          </button>
-          <Link href="/pro" className="focus-ring btn btn-secondary">
-            Provider hub
-          </Link>
+                    <label className="block sm:col-span-2">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Optional review</span>
+                      <textarea
+                        value={form.review}
+                        onChange={(event) =>
+                          setCompletionFormByJob((current) => ({
+                            ...current,
+                            [job.id]: { ...form, review: event.target.value }
+                          }))
+                        }
+                        className="focus-ring input-field min-h-20"
+                        placeholder="Share your experience (optional)"
+                      />
+                    </label>
+
+                    {mustExplain ? (
+                      <label className="block sm:col-span-2">
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-red-700">Explanation required for low rating (2 stars or lower)</span>
+                        <textarea
+                          value={form.explanation}
+                          onChange={(event) =>
+                            setCompletionFormByJob((current) => ({
+                              ...current,
+                              [job.id]: { ...form, explanation: event.target.value }
+                            }))
+                          }
+                          className="focus-ring input-field min-h-20"
+                          placeholder="Please explain what went wrong"
+                        />
+                      </label>
+                    ) : null}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onSaveFeedback(job)}
+                    disabled={busyAction === job.id}
+                    className="focus-ring btn btn-primary mt-4 disabled:opacity-60"
+                  >
+                    {busyAction === job.id ? 'Saving...' : 'Save rating, review & payment'}
+                  </button>
+                </article>
+              );
+            })
+          )}
         </div>
       </section>
     </div>
