@@ -38,16 +38,24 @@ create table if not exists public.provider_services (
 
 create table if not exists public.job_requests (
   id uuid primary key default gen_random_uuid(),
+  customer_id uuid references public.profiles(id) on delete set null,
   customer_name text not null,
   customer_phone text not null,
   service_category_id uuid not null references public.service_categories(id),
   provider_id uuid references public.providers(id),
   location text not null,
+  latitude double precision,
+  longitude double precision,
   preferred_date date,
   preferred_time time,
   description text,
   urgency text,
-  status text not null default 'pending',
+  status text not null default 'requested',
+  accepted_at timestamptz,
+  started_at timestamptz,
+  completed_at timestamptz,
+  cancelled_at timestamptz,
+  cancel_reason text,
   created_at timestamptz not null default now()
 );
 

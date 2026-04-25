@@ -24,8 +24,6 @@ export type Provider = {
   completedJobs: number;
   responseTime?: string;
   priceGuide?: string;
-  phone: string;
-  whatsapp: string;
   availability: string;
   reviews: number;
   reviewCount?: number;

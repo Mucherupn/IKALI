@@ -33,8 +33,6 @@ function normalizeProvider(provider: {
   rating: number;
   completed_jobs: number;
   price_guide?: string | null;
-  phone: string;
-  whatsapp: string;
   availability_text?: string | null;
   serviceSlug: string;
   reviews: number;
@@ -56,8 +54,6 @@ function normalizeProvider(provider: {
     rating: Number(provider.rating ?? 0),
     completedJobs: provider.completed_jobs ?? 0,
     priceGuide: provider.price_guide ?? undefined,
-    phone: provider.phone,
-    whatsapp: provider.whatsapp,
     availability: provider.availability_text ?? 'Contact for availability',
     reviews: provider.reviews,
     reviewCount: provider.reviews,
