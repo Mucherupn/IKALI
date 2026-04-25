@@ -1,6 +1,7 @@
 import { User } from '@supabase/supabase-js';
 import { Database } from '@/lib/database.types';
 import { getSupabaseClient } from '@/lib/supabase';
+import { normalizeEmail, normalizeKenyanPhone, normalizeLocation, normalizeName } from '@/lib/validation';
 
 export const USER_ROLES = ['customer', 'provider', 'admin'] as const;
 
@@ -70,10 +71,10 @@ export async function ensureCustomerProfile(
     id: user.id,
     role: 'customer',
     pro_application_status: 'not_applied',
-    full_name: formData?.full_name?.trim() || (user.user_metadata?.full_name as string | undefined) || null,
-    phone: formData?.phone?.trim() || null,
-    email: formData?.email?.trim() || user.email || null,
-    default_location: formData?.default_location?.trim() || null,
+    full_name: formData?.full_name ? normalizeName(formData.full_name) : ((user.user_metadata?.full_name as string | undefined) ?? null),
+    phone: formData?.phone ? normalizeKenyanPhone(formData.phone) : null,
+    email: formData?.email ? normalizeEmail(formData.email) : user.email ?? null,
+    default_location: formData?.default_location ? normalizeLocation(formData.default_location) : null,
     updated_at: now
   };
 

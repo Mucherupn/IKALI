@@ -1,4 +1,5 @@
 import { MpesaConfig, MpesaStkRequest } from '@/lib/payments/types';
+import { normalizeKenyanPhone as normalizeKenyanPhoneForValidation } from '@/lib/validation';
 
 const E164_PHONE_REGEX = /^\+?[1-9]\d{8,14}$/;
 
@@ -68,13 +69,7 @@ export function getMpesaConfigFromEnv(): { configured: true; config: MpesaConfig
 }
 
 export function normalizeKenyanPhone(phone: string): string | null {
-  const input = phone.replace(/\s+/g, '').trim();
-  if (!input) return null;
-
-  if (/^\+254\d{9}$/.test(input)) return input.slice(1);
-  if (/^254\d{9}$/.test(input)) return input;
-  if (/^0\d{9}$/.test(input)) return `254${input.slice(1)}`;
-  return null;
+  return normalizeKenyanPhoneForValidation(phone);
 }
 
 function timestampInNairobi() {
