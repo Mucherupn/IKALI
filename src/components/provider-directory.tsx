@@ -18,6 +18,18 @@ type ProviderDirectoryProps = {
 };
 
 const LOCATION_SUGGESTIONS = ['Karen', 'Kilimani', 'Westlands', 'Kileleshwa', 'Langata', 'Rongai'] as const;
+const NEARBY_AREA_MAP: Record<string, string[]> = {
+  karen: ['langata', 'rongai', 'kileleshwa'],
+  kilimani: ['kileleshwa', 'lavington', 'westlands'],
+  westlands: ['kileleshwa', 'lavington', 'kilimani'],
+  kileleshwa: ['kilimani', 'lavington', 'westlands'],
+  lavington: ['kileleshwa', 'kilimani', 'westlands'],
+  langata: ['karen', 'rongai', 'south b'],
+  rongai: ['langata', 'karen'],
+  runda: ['westlands', 'kileleshwa'],
+  'south b': ['embakasi', 'langata'],
+  embakasi: ['south b', 'langata']
+};
 
 export function ProviderDirectory({
   providers,
@@ -91,16 +103,15 @@ export function ProviderDirectory({
     return LOCATION_SUGGESTIONS.filter((location) => location.toLowerCase().includes(normalized)).slice(0, 6);
   }, [selectedLocation]);
 
-  const filteredProviders = useMemo(() => {
+  const { filteredProviders, isLocationFallbackActive } = useMemo(() => {
     const parsedQuery = extractSearchIntent(query);
     const normalizedLocationSearch = (selectedLocation || parsedQuery.locationQuery).trim().toLowerCase();
     const filterByDistance = (parsedQuery.nearMe || initialNearMe) && userCoords;
 
-    return providers.filter((provider) => {
+    const queryFilteredProviders = providers.filter((provider) => {
       const serviceName = serviceNamesBySlug?.[provider.serviceCategory] ?? provider.serviceCategory;
       const matchesQuery = matchesProviderSearch(provider, serviceName, parsedQuery.serviceQuery || query);
 
-      const matchesLocation = !normalizedLocationSearch || provider.location.toLowerCase().includes(normalizedLocationSearch);
       const matchesRating = minimumRating === 'all' || provider.rating >= Number(minimumRating);
       const matchesVerification = !verifiedOnly || provider.verified;
       const matchesDistance =
@@ -109,8 +120,54 @@ export function ProviderDirectory({
         provider.longitude === undefined ||
         getDistanceInKm(userCoords.latitude, userCoords.longitude, provider.latitude, provider.longitude) <= 20;
 
-      return matchesQuery && matchesLocation && matchesRating && matchesVerification && matchesDistance;
+      return matchesQuery && matchesRating && matchesVerification && matchesDistance;
     });
+
+    const providersInSelectedLocation = normalizedLocationSearch
+      ? queryFilteredProviders.filter((provider) => provider.location.toLowerCase().includes(normalizedLocationSearch))
+      : queryFilteredProviders;
+
+    const sortByDistanceIfPossible = (items: Provider[]) => {
+      if (!userCoords) return items;
+
+      return [...items].sort((providerA, providerB) => {
+        const distanceA =
+          providerA.latitude !== undefined && providerA.longitude !== undefined
+            ? getDistanceInKm(userCoords.latitude, userCoords.longitude, providerA.latitude, providerA.longitude)
+            : Number.POSITIVE_INFINITY;
+        const distanceB =
+          providerB.latitude !== undefined && providerB.longitude !== undefined
+            ? getDistanceInKm(userCoords.latitude, userCoords.longitude, providerB.latitude, providerB.longitude)
+            : Number.POSITIVE_INFINITY;
+
+        return distanceA - distanceB;
+      });
+    };
+
+    if (providersInSelectedLocation.length > 0 || !normalizedLocationSearch) {
+      return {
+        filteredProviders: sortByDistanceIfPossible(providersInSelectedLocation),
+        isLocationFallbackActive: false
+      };
+    }
+
+    if (userCoords) {
+      return {
+        filteredProviders: sortByDistanceIfPossible(queryFilteredProviders),
+        isLocationFallbackActive: queryFilteredProviders.length > 0
+      };
+    }
+
+    const nearbyAreas = NEARBY_AREA_MAP[normalizedLocationSearch] ?? [];
+    const nearbyProviders = queryFilteredProviders.filter((provider) => {
+      const providerLocation = provider.location.toLowerCase();
+      return nearbyAreas.some((area) => providerLocation.includes(area));
+    });
+
+    return {
+      filteredProviders: nearbyProviders,
+      isLocationFallbackActive: nearbyProviders.length > 0
+    };
   }, [initialNearMe, minimumRating, providers, query, selectedLocation, serviceNamesBySlug, userCoords, verifiedOnly]);
 
   const clearFilters = () => {
@@ -232,6 +289,7 @@ export function ProviderDirectory({
           </div>
         ) : null}
         {isNearMeSearch && geoDenied ? <p className="mt-3 text-sm text-[#D71920]">Please type your location manually</p> : null}
+        {isLocationFallbackActive ? <p className="mt-3 text-sm text-[#D71920]">No providers found here. Showing nearest providers.</p> : null}
       </section>
 
       {filteredProviders.length > 0 ? (
