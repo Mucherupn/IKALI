@@ -118,16 +118,24 @@ export type Database = {
       job_requests: TableDef<
         {
           id: string;
+          customer_id: string | null;
           customer_name: string;
           customer_phone: string;
           service_category_id: string;
           provider_id: string | null;
           location: string;
+          latitude: number | null;
+          longitude: number | null;
           preferred_date: string | null;
           preferred_time: string | null;
           description: string | null;
           urgency: string | null;
           status: string;
+          accepted_at: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+          cancelled_at: string | null;
+          cancel_reason: string | null;
           payment_status: string | null;
           payment_amount: number | null;
           payment_reference: string | null;
@@ -138,16 +146,24 @@ export type Database = {
         },
         {
           id?: string;
+          customer_id?: string | null;
           customer_name: string;
           customer_phone: string;
           service_category_id: string;
           provider_id?: string | null;
           location: string;
+          latitude?: number | null;
+          longitude?: number | null;
           preferred_date?: string | null;
           preferred_time?: string | null;
           description?: string | null;
           urgency?: string | null;
           status?: string;
+          accepted_at?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+          cancelled_at?: string | null;
+          cancel_reason?: string | null;
           payment_status?: string | null;
           payment_amount?: number | null;
           payment_reference?: string | null;
@@ -158,16 +174,24 @@ export type Database = {
         },
         {
           id?: string;
+          customer_id?: string | null;
           customer_name?: string;
           customer_phone?: string;
           service_category_id?: string;
           provider_id?: string | null;
           location?: string;
+          latitude?: number | null;
+          longitude?: number | null;
           preferred_date?: string | null;
           preferred_time?: string | null;
           description?: string | null;
           urgency?: string | null;
           status?: string;
+          accepted_at?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+          cancelled_at?: string | null;
+          cancel_reason?: string | null;
           payment_status?: string | null;
           payment_amount?: number | null;
           payment_reference?: string | null;

@@ -50,6 +50,9 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
   const [authReady, setAuthReady] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [canBookAsCustomer, setCanBookAsCustomer] = useState(false);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [profileLatitude, setProfileLatitude] = useState<number | null>(null);
+  const [profileLongitude, setProfileLongitude] = useState<number | null>(null);
 
   const [formData, setFormData] = useState<RequestFormData>({
     ...initialFormState,
@@ -69,9 +72,12 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
 
         if (session?.user) {
           setIsAuthenticated(true);
-          const { data: profile } = await supabase.from('profiles').select('role, full_name, phone').eq('id', session.user.id).maybeSingle();
+          setCustomerId(session.user.id);
+          const { data: profile } = await supabase.from('profiles').select('role, full_name, phone, latitude, longitude').eq('id', session.user.id).maybeSingle();
           const role = isValidUserRole(profile?.role) ? profile.role : null;
           setCanBookAsCustomer(role === 'customer' || role === 'admin');
+          setProfileLatitude(profile?.latitude ?? null);
+          setProfileLongitude(profile?.longitude ?? null);
           setFormData((current) => ({
             ...current,
             customerName: current.customerName || profile?.full_name || session.user.user_metadata?.full_name || '',
@@ -80,6 +86,9 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
         } else {
           setIsAuthenticated(false);
           setCanBookAsCustomer(false);
+          setCustomerId(null);
+          setProfileLatitude(null);
+          setProfileLongitude(null);
         }
 
         setAuthReady(true);
@@ -134,6 +143,11 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
       return;
     }
 
+    if (!customerId) {
+      setSubmitError('Your account is not ready for booking yet. Please log in again.');
+      return;
+    }
+
     if (!formData.customerName.trim() || !formData.phoneNumber.trim() || !formData.serviceSlug || !formData.location.trim()) {
       return;
     }
@@ -156,11 +170,14 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
       )?.id;
 
       const payload: Database['public']['Tables']['job_requests']['Insert'] = {
+        customer_id: customerId,
         customer_name: formData.customerName.trim(),
         customer_phone: formData.phoneNumber.trim(),
         service_category_id: selectedService.id,
         provider_id: providerId ?? null,
         location: formData.location.trim(),
+        latitude: profileLatitude,
+        longitude: profileLongitude,
         preferred_date: formData.preferredDate || null,
         preferred_time: formData.preferredTime || null,
         description: formData.jobDescription.trim() || null,
@@ -192,11 +209,11 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
           </p>
           <h2 className="mt-4 text-2xl font-bold text-slate-900">Request sent successfully</h2>
           <p className="mt-3 text-slate-600">
-            Your booking request has been received. An I Kali professional will contact you shortly to confirm availability.
+            Your booking request has been received. The provider will review and accept the request before the job becomes active.
           </p>
           <p className="mt-2 text-sm text-slate-600">We will review your request and connect you with the right professional.</p>
           <p className="mt-2 text-sm text-slate-600">
-            Payment is not required yet. An I Kali representative will confirm the job details before any payment is requested.
+            Payment is not required yet. Once the provider accepts, you can proceed with the confirmed booking flow.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Link href="/" className="focus-ring btn btn-primary">
