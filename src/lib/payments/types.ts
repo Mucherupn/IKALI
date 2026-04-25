@@ -1,6 +1,6 @@
 export type PaymentStatus = 'unpaid' | 'pending' | 'paid' | 'failed' | 'refunded';
 
-export type PaymentType = 'booking_fee' | 'deposit' | 'full_payment';
+export type PaymentType = 'booking_fee' | 'deposit' | 'full_payment' | 'provider_commission_payment';
 
 export type MpesaStkRequest = {
   amount: number;

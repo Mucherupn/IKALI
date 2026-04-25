@@ -294,6 +294,53 @@ export type Database = {
           created_at?: string;
         }
       >;
+      mpesa_payments: TableDef<
+        {
+          id: string;
+          provider_id: string;
+          amount: number;
+          phone: string;
+          checkout_request_id: string;
+          merchant_request_id: string;
+          status: string;
+          result_code: number | null;
+          result_description: string | null;
+          mpesa_receipt_number: string | null;
+          created_at: string;
+          paid_at: string | null;
+          raw_callback: Json | null;
+        },
+        {
+          id?: string;
+          provider_id: string;
+          amount: number;
+          phone: string;
+          checkout_request_id: string;
+          merchant_request_id: string;
+          status?: string;
+          result_code?: number | null;
+          result_description?: string | null;
+          mpesa_receipt_number?: string | null;
+          created_at?: string;
+          paid_at?: string | null;
+          raw_callback?: Json | null;
+        },
+        {
+          id?: string;
+          provider_id?: string;
+          amount?: number;
+          phone?: string;
+          checkout_request_id?: string;
+          merchant_request_id?: string;
+          status?: string;
+          result_code?: number | null;
+          result_description?: string | null;
+          mpesa_receipt_number?: string | null;
+          created_at?: string;
+          paid_at?: string | null;
+          raw_callback?: Json | null;
+        }
+      >;
       profiles: TableDef<
         {
           id: string;
@@ -366,7 +413,18 @@ export type Database = {
       >;
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      add_provider_ledger_entry: {
+        Args: {
+          p_provider_id: string;
+          p_type: Database['public']['Enums']['provider_ledger_type'];
+          p_amount: number;
+          p_description?: string | null;
+          p_job_request_id?: string | null;
+        };
+        Returns: Database['public']['Tables']['provider_ledger']['Row'];
+      };
+    };
     Enums: {
       provider_ledger_type: 'commission_due' | 'payment_received' | 'adjustment' | 'credit_applied' | 'penalty';
     };

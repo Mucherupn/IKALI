@@ -77,7 +77,9 @@ export default function ProPage() {
 
   const [declineReasonByJob, setDeclineReasonByJob] = useState<Record<string, string>>({});
   const [dropReason, setDropReason] = useState('');
-  const [manualPaymentMessage, setManualPaymentMessage] = useState('');
+  const [providerPaymentAmount, setProviderPaymentAmount] = useState('');
+  const [providerPaymentPhone, setProviderPaymentPhone] = useState('');
+  const [providerPaymentMessage, setProviderPaymentMessage] = useState('');
   const [providerCompletionFormByJob, setProviderCompletionFormByJob] = useState<Record<string, ProviderCompletionForm>>({});
   const [providerAccount, setProviderAccount] = useState<ProviderAccountRow | null>(null);
   const [providerLedger, setProviderLedger] = useState<ProviderLedgerRow[]>([]);
@@ -129,6 +131,7 @@ export default function ProPage() {
 
       const providerRow = providerRes.data;
       setProvider(providerRow);
+      setProviderPaymentPhone(providerRow?.phone ?? '');
       setCategories(categoriesRes.data ?? []);
 
       if (!providerRow) {
@@ -484,15 +487,64 @@ export default function ProPage() {
     }
   }
 
-  function onPayNow() {
+  async function onPayNow() {
     if (paymentSummary.commissionsOwed <= 0) {
-      setManualPaymentMessage('No outstanding commission to pay right now.');
+      setProviderPaymentMessage('No outstanding commission to pay right now.');
       return;
     }
 
-    setManualPaymentMessage(
-      `Manual settlement started for ${formatCurrency(paymentSummary.commissionsOwed)}. An admin will confirm and reconcile this payment.`
-    );
+    const amount = Number(providerPaymentAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setProviderPaymentMessage('Enter a valid payment amount first.');
+      return;
+    }
+
+    if (!providerPaymentPhone.trim()) {
+      setProviderPaymentMessage('Enter the M-Pesa phone number to receive STK push.');
+      return;
+    }
+
+    try {
+      setBusyAction('provider-pay-now');
+      setProviderPaymentMessage('');
+      setErrorMessage('');
+      setStatusMessage('');
+
+      const supabase = getSupabaseClient();
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error('Please sign in again and retry payment.');
+      }
+
+      const response = await fetch('/api/payments/mpesa/stk', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          amount,
+          phone: providerPaymentPhone.trim(),
+          paymentType: 'provider_commission_payment'
+        })
+      });
+
+      const data = (await response.json()) as { ok?: boolean; message?: string; state?: string };
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message ?? 'Unable to initiate M-Pesa payment.');
+      }
+
+      setProviderPaymentMessage(`STK push sent. Payment is pending confirmation from M-Pesa callback.`);
+      setProviderPaymentAmount('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to initiate payment.';
+      setProviderPaymentMessage(message);
+    } finally {
+      setBusyAction('');
+    }
   }
 
   if (accessState === 'loading' || loading) {
@@ -536,7 +588,7 @@ export default function ProPage() {
       <section className="card-premium p-6 sm:p-8">
         <p className="eyebrow">Provider dashboard</p>
         <h1 className="section-heading mt-3">/pro</h1>
-        <p className="mt-3 max-w-3xl text-slate-600">Manual-first provider operations: stable job management, profile updates, and commission tracking.</p>
+        <p className="mt-3 max-w-3xl text-slate-600">Provider operations: job management, profile updates, and real M-Pesa commission payment tracking.</p>
 
         {errorMessage ? <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{errorMessage}</p> : null}
         {statusMessage ? (
@@ -808,12 +860,30 @@ export default function ProPage() {
             </article>
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <button className="focus-ring btn btn-primary" type="button" onClick={onPayNow}>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={providerPaymentAmount}
+              onChange={(event) => setProviderPaymentAmount(event.target.value)}
+              placeholder={`Amount (max owed ${Math.ceil(paymentSummary.commissionsOwed)})`}
+              className="focus-ring input-field w-56"
+            />
+            <input
+              type="tel"
+              value={providerPaymentPhone}
+              onChange={(event) => setProviderPaymentPhone(event.target.value)}
+              placeholder="M-Pesa phone e.g. 07XXXXXXXX"
+              className="focus-ring input-field w-64"
+            />
+            <button className="focus-ring btn btn-primary" type="button" onClick={onPayNow} disabled={busyAction === 'provider-pay-now'}>
               Pay now
             </button>
-            <p className="text-sm text-slate-600">Manual settlement mode. No live M-Pesa charge is triggered here.</p>
+            <p className="text-sm text-slate-600">STK push is initiated via backend and stays pending until verified callback marks paid/failed.</p>
           </div>
-          {manualPaymentMessage ? <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200">{manualPaymentMessage}</p> : null}
+          {providerPaymentMessage ? (
+            <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200">{providerPaymentMessage}</p>
+          ) : null}
         </section>
 
         <section className="mt-10">
