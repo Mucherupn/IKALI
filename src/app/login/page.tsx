@@ -5,10 +5,16 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase';
 
+function routeForRole(role: string | null | undefined) {
+  if (role === 'admin') return '/control';
+  if (role === 'provider') return '/pro';
+  return '/account';
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get('next') || '/account';
+  const nextPath = searchParams.get('next');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,17 +28,24 @@ export default function LoginPage() {
 
     try {
       const supabase = getSupabaseClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password
       });
 
       if (error) throw error;
 
-      router.push(nextPath);
+      let destination = nextPath;
+
+      if (!destination) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).maybeSingle();
+        destination = routeForRole(profile?.role);
+      }
+
+      router.push(destination);
       router.refresh();
     } catch {
-      setErrorMessage('Unable to log in. Please confirm your email and password.');
+      setErrorMessage('Unable to sign in. Please confirm your email and password.');
     } finally {
       setIsSubmitting(false);
     }
@@ -42,8 +55,8 @@ export default function LoginPage() {
     <div className="section-shell max-w-xl py-10">
       <section className="card-premium p-6 sm:p-8">
         <p className="eyebrow">Welcome back</p>
-        <h1 className="page-title mt-2">Log in</h1>
-        <p className="mt-2 text-sm text-slate-600">You only need an account when hiring a pro or submitting a booking.</p>
+        <h1 className="page-title mt-2">Sign in</h1>
+        <p className="mt-2 text-sm text-slate-600">Use your I-Kali account to request services, manage bookings, or continue pro onboarding.</p>
 
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <label className="block">
@@ -74,13 +87,13 @@ export default function LoginPage() {
           {errorMessage ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{errorMessage}</p> : null}
 
           <button type="submit" disabled={isSubmitting} className="focus-ring btn btn-primary min-h-11 w-full disabled:opacity-60">
-            {isSubmitting ? 'Logging in...' : 'Log in'}
+            {isSubmitting ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
         <p className="mt-5 text-sm text-slate-600">
           New to I Kali?{' '}
-          <Link href={`/signup?next=${encodeURIComponent(nextPath)}`} className="font-semibold text-[#D71920] hover:text-[#A80F1A]">
+          <Link href={`/signup${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`} className="font-semibold text-[#D71920] hover:text-[#A80F1A]">
             Create an account
           </Link>
         </p>

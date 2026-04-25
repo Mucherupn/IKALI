@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Database } from '@/lib/database.types';
 import { getSupabaseClient } from '@/lib/supabase';
 
-type AccessState = 'loading' | 'unauthenticated' | 'forbidden' | 'allowed';
+type AccessState = 'loading' | 'unauthenticated' | 'pending' | 'rejected' | 'not_applied' | 'allowed';
 type ProviderStatus = 'available' | 'engaged' | 'restricted';
 type JobRequestRow = Database['public']['Tables']['job_requests']['Row'];
 type JobCompletionRow = Database['public']['Tables']['job_completions']['Row'];
@@ -111,9 +111,15 @@ export default function ProPage() {
         return;
       }
 
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle();
+      const { data: profile } = await supabase.from('profiles').select('role, pro_application_status').eq('id', session.user.id).maybeSingle();
       if (profile?.role !== 'provider') {
-        setAccessState('forbidden');
+        if (profile?.pro_application_status === 'pending') {
+          setAccessState('pending');
+        } else if (profile?.pro_application_status === 'rejected') {
+          setAccessState('rejected');
+        } else {
+          setAccessState('not_applied');
+        }
         setLoading(false);
         return;
       }
@@ -569,15 +575,37 @@ export default function ProPage() {
     );
   }
 
-  if (accessState === 'forbidden') {
+  if (accessState === 'pending') {
+    return (
+      <div className="section-shell max-w-2xl py-10">
+        <section className="card-premium p-6 sm:p-8">
+          <h1 className="page-title">Your pro application is under review.</h1>
+          <p className="mt-3 text-slate-600">You can continue using your customer account while the admin team reviews your profile.</p>
+          <Link href="/account" className="focus-ring btn btn-secondary mt-5 inline-flex">Go to account</Link>
+        </section>
+      </div>
+    );
+  }
+
+  if (accessState === 'rejected') {
+    return (
+      <div className="section-shell max-w-2xl py-10">
+        <section className="card-premium p-6 sm:p-8">
+          <h1 className="page-title">Your pro application was not approved.</h1>
+          <p className="mt-3 text-slate-600">Contact I-Kali if you believe this was a mistake.</p>
+          <Link href="/contact" className="focus-ring btn btn-secondary mt-5 inline-flex">Contact support</Link>
+        </section>
+      </div>
+    );
+  }
+
+  if (accessState === 'not_applied') {
     return (
       <div className="section-shell max-w-2xl py-10">
         <section className="card-premium p-6 sm:p-8">
           <h1 className="page-title">Provider access required</h1>
-          <p className="mt-3 text-slate-600">Only provider users can access /pro. Please switch your role from Account settings first.</p>
-          <Link href="/account" className="focus-ring btn btn-secondary mt-5 inline-flex">
-            Go to account
-          </Link>
+          <p className="mt-3 text-slate-600">Apply to become an I-Kali pro to access the provider dashboard.</p>
+          <Link href="/become-a-pro" className="focus-ring btn btn-primary mt-5 inline-flex">Apply to become a pro</Link>
         </section>
       </div>
     );

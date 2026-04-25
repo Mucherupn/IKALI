@@ -75,7 +75,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
           setCustomerId(session.user.id);
           const { data: profile } = await supabase.from('profiles').select('role, full_name, phone, latitude, longitude').eq('id', session.user.id).maybeSingle();
           const role = isValidUserRole(profile?.role) ? profile.role : null;
-          setCanBookAsCustomer(role === 'customer' || role === 'admin');
+          setCanBookAsCustomer(role === 'customer' || role === 'provider' || role === 'admin');
           setProfileLatitude(profile?.latitude ?? null);
           setProfileLongitude(profile?.longitude ?? null);
           setFormData((current) => ({
@@ -95,7 +95,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
 
         const [{ data: serviceRows, error: servicesError }, { data: providerRows, error: providersError }] = await Promise.all([
           supabase.from('service_categories').select('id, name, slug').eq('is_active', true).order('name'),
-          supabase.from('providers').select('id, full_name, slug').order('full_name')
+          supabase.from('providers').select('id, full_name, slug').eq('approval_status', 'approved').eq('is_public', true).order('full_name')
         ]);
 
         if (!isMounted) return;

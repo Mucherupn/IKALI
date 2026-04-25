@@ -10,8 +10,10 @@ type ServiceCategoryRow = Database['public']['Tables']['service_categories']['Ro
 type ServiceCategoryInsert = Database['public']['Tables']['service_categories']['Insert'];
 type JobRequestRow = Database['public']['Tables']['job_requests']['Row'];
 type ProviderServiceRow = Database['public']['Tables']['provider_services']['Row'];
+type ProApplicationRow = Database['public']['Tables']['pro_applications']['Row'];
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
-type AdminTab = 'providers' | 'categories' | 'requests';
+type AdminTab = 'providers' | 'categories' | 'applications' | 'requests';
 type BookingDisplayStatus = 'requested' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
 type StoredRequestStatus = BookingDisplayStatus | 'new' | 'contacted' | 'assigned' | 'pending';
 
@@ -48,6 +50,7 @@ type CategoryFormState = {
 const TAB_OPTIONS: { id: AdminTab; label: string }[] = [
   { id: 'providers', label: 'Providers' },
   { id: 'categories', label: 'Service Categories' },
+  { id: 'applications', label: 'Pro Applications' },
   { id: 'requests', label: 'Booking Requests' }
 ];
 
@@ -134,6 +137,8 @@ export function ControlAdminDashboard() {
   const [serviceCategories, setServiceCategories] = useState<ServiceCategoryRow[]>([]);
   const [providerServices, setProviderServices] = useState<ProviderServiceRow[]>([]);
   const [jobRequests, setJobRequests] = useState<JobRequestRow[]>([]);
+  const [proApplications, setProApplications] = useState<ProApplicationRow[]>([]);
+  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
 
   const [providerForm, setProviderForm] = useState<ProviderFormState>(providerInitialState);
   const [categoryForm, setCategoryForm] = useState<CategoryFormState>(categoryInitialState);
@@ -141,6 +146,7 @@ export function ControlAdminDashboard() {
   const [isSavingProvider, setIsSavingProvider] = useState(false);
   const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [busyRequestId, setBusyRequestId] = useState('');
+  const [busyApplicationId, setBusyApplicationId] = useState('');
 
   const providerNameById = useMemo(() => new Map(providers.map((provider) => [provider.id, provider.full_name])), [providers]);
   const categoryNameById = useMemo(() => new Map(serviceCategories.map((category) => [category.id, category.name])), [serviceCategories]);
@@ -153,14 +159,16 @@ export function ControlAdminDashboard() {
       const supabase = getSupabaseClient();
       setSupabaseReady(true);
 
-      const [providersRes, categoriesRes, providerServicesRes, requestsRes] = await Promise.all([
+      const [providersRes, categoriesRes, providerServicesRes, requestsRes, applicationsRes, profilesRes] = await Promise.all([
         supabase.from('providers').select('*').order('created_at', { ascending: false }),
         supabase.from('service_categories').select('*').order('name'),
         supabase.from('provider_services').select('*'),
-        supabase.from('job_requests').select('*').order('created_at', { ascending: false })
+        supabase.from('job_requests').select('*').order('created_at', { ascending: false }),
+        supabase.from('pro_applications').select('*').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('*')
       ]);
 
-      if (providersRes.error || categoriesRes.error || providerServicesRes.error || requestsRes.error) {
+      if (providersRes.error || categoriesRes.error || providerServicesRes.error || requestsRes.error || applicationsRes.error || profilesRes.error) {
         throw new Error('Failed to load one or more admin datasets.');
       }
 
@@ -168,12 +176,16 @@ export function ControlAdminDashboard() {
       setServiceCategories(categoriesRes.data ?? []);
       setProviderServices(providerServicesRes.data ?? []);
       setJobRequests(requestsRes.data ?? []);
+      setProApplications(applicationsRes.data ?? []);
+      setProfiles(profilesRes.data ?? []);
     } catch {
       setSupabaseReady(false);
       setProviders([]);
       setServiceCategories([]);
       setProviderServices([]);
       setJobRequests([]);
+      setProApplications([]);
+      setProfiles([]);
       setError('Supabase is currently unavailable. Showing empty admin state.');
     } finally {
       setLoading(false);
@@ -418,6 +430,65 @@ export function ControlAdminDashboard() {
     }
   }
 
+  async function updateApplicationStatus(application: ProApplicationRow, status: ProApplicationRow['status']) {
+    resetMessages();
+    setBusyApplicationId(application.id);
+
+    try {
+      const supabase = getSupabaseClient();
+      const now = new Date().toISOString();
+
+      const { error: applicationError } = await supabase
+        .from('pro_applications')
+        .update({ status, updated_at: now })
+        .eq('id', application.id);
+      if (applicationError) throw applicationError;
+
+      const profileUpdate: Database['public']['Tables']['profiles']['Update'] = {
+        pro_application_status: status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : 'pending',
+        updated_at: now
+      };
+      const { error: profileError } = await supabase.from('profiles').update(profileUpdate).eq('id', application.user_id);
+      if (profileError) throw profileError;
+
+      if (status === 'approved') {
+        const providerPayload: Database['public']['Tables']['providers']['Insert'] = {
+          id: application.user_id,
+          user_id: application.user_id,
+          full_name: application.full_name,
+          slug: slugify(application.full_name),
+          phone: application.phone,
+          whatsapp: application.phone,
+          location: application.location,
+          service_area: application.service_areas,
+          bio: application.bio,
+          profile_image_url: application.profile_photo_url,
+          years_experience: application.years_experience,
+          price_guide: application.price_guide,
+          availability_text: application.availability,
+          approval_status: 'approved',
+          provider_status: 'available',
+          is_public: true
+        };
+        const { error: providerError } = await supabase.from('providers').upsert(providerPayload);
+        if (providerError) throw providerError;
+
+        await supabase.from('profiles').update({ role: 'provider', updated_at: now }).eq('id', application.user_id);
+      }
+
+      if (status === 'rejected') {
+        await supabase.from('providers').update({ approval_status: 'rejected', is_public: false }).eq('id', application.user_id);
+      }
+
+      setSuccessMessage(`Application marked as ${status}.`);
+      await loadAll();
+    } catch {
+      setError('Could not update pro application status.');
+    } finally {
+      setBusyApplicationId('');
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -433,7 +504,7 @@ export function ControlAdminDashboard() {
       <section className="card border-amber-300 bg-amber-50 p-4">
         <h2 className="text-sm font-semibold text-amber-900">Security warning</h2>
         <p className="mt-1 text-sm text-amber-800">
-          /control is an internal MVP tool and is not protected yet. Do not deploy without authentication and role-based access controls.
+          Admin actions affect live provider visibility and roles. Only approved admins should access this dashboard.
         </p>
       </section>
 
@@ -812,6 +883,74 @@ export function ControlAdminDashboard() {
                     </article>
                   ))}
                 </div>
+              </div>
+            </section>
+          )}
+
+          {activeTab === 'applications' && (
+            <section className="card overflow-hidden">
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
+                    <tr>
+                      <th className="px-3 py-3">Applicant</th>
+                      <th className="px-3 py-3">Service</th>
+                      <th className="px-3 py-3">Experience</th>
+                      <th className="px-3 py-3">Status</th>
+                      <th className="px-3 py-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {proApplications.map((application) => (
+                      <tr key={application.id} className="border-t border-slate-200 align-top">
+                        <td className="px-3 py-3">
+                          <p className="font-semibold text-slate-900">{application.full_name}</p>
+                          <p className="text-xs text-slate-600">{application.email}</p>
+                          <p className="text-xs text-slate-600">{application.phone}</p>
+                          <p className="mt-1 text-xs text-slate-500">{new Date(application.created_at).toLocaleDateString()}</p>
+                        </td>
+                        <td className="px-3 py-3 text-xs text-slate-600">
+                          <p>Main: {categoryNameById.get(application.main_service_category_id ?? '') ?? 'Not selected'}</p>
+                          <p>Areas: {application.service_areas}</p>
+                          <p>Location: {application.location}</p>
+                        </td>
+                        <td className="px-3 py-3 text-xs text-slate-600">
+                          <p>{application.years_experience} years</p>
+                          <p className="mt-1 line-clamp-3">{application.bio}</p>
+                        </td>
+                        <td className="px-3 py-3 text-xs text-slate-700">
+                          <p className="font-semibold">{application.status}</p>
+                          <p>Profile: {profiles.find((profile) => profile.id === application.user_id)?.pro_application_status ?? 'unknown'}</p>
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => updateApplicationStatus(application, 'approved')}
+                              disabled={busyApplicationId === application.id}
+                              className="rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => updateApplicationStatus(application, 'rejected')}
+                              disabled={busyApplicationId === application.id}
+                              className="rounded-md bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-800"
+                            >
+                              Reject
+                            </button>
+                            <button
+                              onClick={() => updateApplicationStatus(application, 'needs_more_info')}
+                              disabled={busyApplicationId === application.id}
+                              className="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800"
+                            >
+                              Needs info
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </section>
           )}
