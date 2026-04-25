@@ -3,12 +3,30 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useState } from 'react';
-import { getSupabaseClient } from '@/lib/supabase';
+import { ensureCustomerProfile, getRedirectForProfile } from '@/lib/auth';
+import { getSupabaseClient, getSupabaseConfigError } from '@/lib/supabase';
+
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+function toSignupErrorMessage(message: string | undefined) {
+  const normalized = message?.toLowerCase() ?? '';
+
+  if (normalized.includes('already') || normalized.includes('registered') || normalized.includes('exists')) {
+    return 'An account with this email already exists. Please sign in instead.';
+  }
+
+  if (normalized.includes('password')) {
+    return 'Password does not meet requirements. Please use at least 6 characters.';
+  }
+
+  return 'Unable to create account. Please review your details and try again.';
+}
 
 export default function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get('next') || '/account';
+  const configError = getSupabaseConfigError();
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -20,18 +38,20 @@ export default function SignupPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  function toSignupErrorMessage(message: string | undefined) {
-    const normalized = message?.toLowerCase() ?? '';
-    if (normalized.includes('already') || normalized.includes('registered') || normalized.includes('exists')) {
-      return 'An account with this email already exists. Please sign in instead.';
-    }
-    return 'Unable to create account. Please review your details and try again.';
-  }
-
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
+
+    if (configError) {
+      setErrorMessage('Signup is unavailable due to missing Supabase configuration.');
+      return;
+    }
+
+    if (!fullName.trim() || !phone.trim() || !defaultLocation.trim() || !email.trim() || !password || !confirmPassword) {
+      setErrorMessage('Please complete all required fields.');
+      return;
+    }
 
     if (password !== confirmPassword) {
       setErrorMessage('Password and confirm password must match.');
@@ -54,6 +74,9 @@ export default function SignupPage() {
       });
 
       if (error) {
+        if (isDevelopment) {
+          console.error('Signup auth error', error);
+        }
         setErrorMessage(toSignupErrorMessage(error.message));
         return;
       }
@@ -68,25 +91,28 @@ export default function SignupPage() {
         return;
       }
 
-      const { error: profileError } = await supabase.from('profiles').upsert({
-        id: data.user.id,
-        role: 'customer',
-        pro_application_status: 'not_applied',
-        full_name: fullName.trim() || null,
-        phone: phone.trim() || null,
-        email: email.trim(),
-        default_location: defaultLocation.trim() || null,
-        updated_at: new Date().toISOString()
+      const ensured = await ensureCustomerProfile(data.user, {
+        full_name: fullName,
+        phone,
+        email,
+        default_location: defaultLocation
       });
 
-      if (profileError) {
-        setSuccessMessage('Account created. Please sign in to finish setting up your profile.');
+      if (ensured.error) {
+        if (isDevelopment) {
+          console.error('Signup profile upsert error', ensured.error);
+        }
+        setSuccessMessage('Account created. Please check your email to confirm your account.');
         return;
       }
 
-      router.push(nextPath);
+      const destination = getRedirectForProfile(ensured.profile, nextPath);
+      router.push(destination);
       router.refresh();
-    } catch {
+    } catch (error) {
+      if (isDevelopment) {
+        console.error('Signup unexpected error', error);
+      }
       setErrorMessage('Unable to create account right now. Please try again shortly.');
     } finally {
       setIsSubmitting(false);
@@ -98,6 +124,7 @@ export default function SignupPage() {
       <section className="card-premium p-6 sm:p-8">
         <p className="eyebrow">Join I Kali</p>
         <h1 className="page-title mt-2">Create your I-Kali account.</h1>
+        {configError ? <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-100">Developer setup error: {configError}</p> : null}
 
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <label className="block">
@@ -135,7 +162,7 @@ export default function SignupPage() {
           {errorMessage ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{errorMessage}</p> : null}
           {successMessage ? <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700 ring-1 ring-emerald-100">{successMessage}</p> : null}
 
-          <button type="submit" disabled={isSubmitting} className="focus-ring btn btn-primary min-h-11 w-full disabled:opacity-60">
+          <button type="submit" disabled={isSubmitting || Boolean(configError)} className="focus-ring btn btn-primary min-h-11 w-full disabled:opacity-60">
             {isSubmitting ? 'Creating account...' : 'Sign up'}
           </button>
         </form>

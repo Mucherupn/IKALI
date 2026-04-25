@@ -473,11 +473,16 @@ export function ControlAdminDashboard() {
         const { error: providerError } = await supabase.from('providers').upsert(providerPayload);
         if (providerError) throw providerError;
 
-        await supabase.from('profiles').update({ role: 'provider', updated_at: now }).eq('id', application.user_id);
+        const { error: roleError } = await supabase.from('profiles').update({ role: 'provider', updated_at: now }).eq('id', application.user_id);
+        if (roleError) throw roleError;
       }
 
       if (status === 'rejected') {
-        await supabase.from('providers').update({ approval_status: 'rejected', is_public: false }).eq('id', application.user_id);
+        const { error: rejectProviderError } = await supabase
+          .from('providers')
+          .update({ approval_status: 'rejected', is_public: false, provider_status: 'restricted' })
+          .eq('id', application.user_id);
+        if (rejectProviderError) throw rejectProviderError;
       }
 
       setSuccessMessage(`Application marked as ${status}.`);

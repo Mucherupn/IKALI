@@ -8,7 +8,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 
 type ExistingApplication = Pick<
   Database['public']['Tables']['pro_applications']['Row'],
-  'id' | 'status' | 'created_at' | 'updated_at'
+  'id' | 'status' | 'created_at' | 'updated_at' | 'rejection_reason' | 'admin_notes'
 >;
 
 export default function BecomeAProApplyPage() {
@@ -54,7 +54,13 @@ export default function BecomeAProApplyPage() {
       const [profileRes, categoriesRes, existingApplicationRes] = await Promise.all([
         supabase.from('profiles').select('full_name, phone, email, default_location').eq('id', session.user.id).maybeSingle(),
         supabase.from('service_categories').select('id, name').eq('is_active', true).order('name'),
-        supabase.from('pro_applications').select('id, status, created_at, updated_at').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
+        supabase
+          .from('pro_applications')
+          .select('id, status, created_at, updated_at, rejection_reason, admin_notes')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
       ]);
 
       setCategories(categoriesRes.data ?? []);
@@ -103,7 +109,7 @@ export default function BecomeAProApplyPage() {
 
       const { data: latestApplication } = await supabase
         .from('pro_applications')
-        .select('id, status')
+        .select('id, status, rejection_reason, admin_notes, created_at, updated_at')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -113,8 +119,10 @@ export default function BecomeAProApplyPage() {
         setExistingApplication({
           id: latestApplication.id,
           status: latestApplication.status,
-          created_at: existingApplication?.created_at ?? new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: latestApplication.created_at ?? existingApplication?.created_at ?? new Date().toISOString(),
+          updated_at: latestApplication.updated_at ?? new Date().toISOString(),
+          rejection_reason: latestApplication.rejection_reason ?? null,
+          admin_notes: latestApplication.admin_notes ?? null
         });
         setErrorMessage('Your pro application is under review.');
         setIsSubmitting(false);
@@ -170,7 +178,10 @@ export default function BecomeAProApplyPage() {
       if (profileError) throw profileError;
 
       setSuccess(true);
-    } catch {
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Pro application submit error', error);
+      }
       setErrorMessage('Unable to submit your application right now. Please review your details and try again.');
     } finally {
       setIsSubmitting(false);
@@ -227,6 +238,7 @@ export default function BecomeAProApplyPage() {
         {isRejected ? (
           <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200">
             Your application was not approved. You can submit an updated application below.
+            {existingApplication?.rejection_reason ? ` Reason: ${existingApplication.rejection_reason}` : ''}
           </p>
         ) : null}
 
