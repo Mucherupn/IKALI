@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ProviderCard } from '@/components/provider-card';
 import { POPULAR_LOCATIONS, SUGGESTED_SEARCHES, extractSearchIntent, matchesProviderSearch } from '@/lib/search';
@@ -13,6 +13,7 @@ type ProviderDirectoryProps = {
   searchPlaceholder?: string;
   initialQuery?: string;
   initialLocation?: string;
+  initialNearMe?: boolean;
   showSuggestions?: boolean;
 };
 
@@ -25,6 +26,7 @@ export function ProviderDirectory({
   searchPlaceholder = 'Search by name, service, or location',
   initialQuery = '',
   initialLocation = '',
+  initialNearMe = false,
   showSuggestions = false
 }: ProviderDirectoryProps) {
   const intent = extractSearchIntent(initialQuery);
@@ -32,6 +34,54 @@ export function ProviderDirectory({
   const [selectedLocation, setSelectedLocation] = useState(initialLocation || intent.locationQuery || '');
   const [minimumRating, setMinimumRating] = useState('all');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [geoDenied, setGeoDenied] = useState(false);
+  const hasRequestedGeolocation = useRef(false);
+  const isNearMeSearch = initialNearMe || extractSearchIntent(query).nearMe;
+
+  useEffect(() => {
+    const storedCoordinates = sessionStorage.getItem('userLocationCoords');
+
+    if (storedCoordinates) {
+      try {
+        const parsed = JSON.parse(storedCoordinates) as { latitude?: number; longitude?: number };
+
+        if (typeof parsed.latitude === 'number' && typeof parsed.longitude === 'number') {
+          setUserCoords({ latitude: parsed.latitude, longitude: parsed.longitude });
+        }
+      } catch {
+        sessionStorage.removeItem('userLocationCoords');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isNearMeSearch || userCoords || hasRequestedGeolocation.current) return;
+
+    hasRequestedGeolocation.current = true;
+
+    if (!navigator.geolocation) {
+      setGeoDenied(true);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coordinates = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        };
+
+        setUserCoords(coordinates);
+        sessionStorage.setItem('userLocationCoords', JSON.stringify(coordinates));
+        setGeoDenied(false);
+      },
+      () => {
+        setGeoDenied(true);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, [isNearMeSearch, userCoords]);
 
   const matchingLocationSuggestions = useMemo(() => {
     const normalized = selectedLocation.trim().toLowerCase();
@@ -44,6 +94,7 @@ export function ProviderDirectory({
   const filteredProviders = useMemo(() => {
     const parsedQuery = extractSearchIntent(query);
     const normalizedLocationSearch = (selectedLocation || parsedQuery.locationQuery).trim().toLowerCase();
+    const filterByDistance = (parsedQuery.nearMe || initialNearMe) && userCoords;
 
     return providers.filter((provider) => {
       const serviceName = serviceNamesBySlug?.[provider.serviceCategory] ?? provider.serviceCategory;
@@ -52,10 +103,15 @@ export function ProviderDirectory({
       const matchesLocation = !normalizedLocationSearch || provider.location.toLowerCase().includes(normalizedLocationSearch);
       const matchesRating = minimumRating === 'all' || provider.rating >= Number(minimumRating);
       const matchesVerification = !verifiedOnly || provider.verified;
+      const matchesDistance =
+        !filterByDistance ||
+        provider.latitude === undefined ||
+        provider.longitude === undefined ||
+        getDistanceInKm(userCoords.latitude, userCoords.longitude, provider.latitude, provider.longitude) <= 20;
 
-      return matchesQuery && matchesLocation && matchesRating && matchesVerification;
+      return matchesQuery && matchesLocation && matchesRating && matchesVerification && matchesDistance;
     });
-  }, [minimumRating, providers, query, selectedLocation, serviceNamesBySlug, verifiedOnly]);
+  }, [initialNearMe, minimumRating, providers, query, selectedLocation, serviceNamesBySlug, userCoords, verifiedOnly]);
 
   const clearFilters = () => {
     setQuery('');
@@ -175,6 +231,7 @@ export function ProviderDirectory({
             ))}
           </div>
         ) : null}
+        {isNearMeSearch && geoDenied ? <p className="mt-3 text-sm text-[#D71920]">Please type your location manually</p> : null}
       </section>
 
       {filteredProviders.length > 0 ? (
@@ -212,4 +269,23 @@ export function ProviderDirectory({
       )}
     </div>
   );
+}
+
+function getDistanceInKm(fromLatitude: number, fromLongitude: number, toLatitude: number, toLongitude: number) {
+  const earthRadiusKm = 6371;
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+
+  const latitudeDelta = toRadians(toLatitude - fromLatitude);
+  const longitudeDelta = toRadians(toLongitude - fromLongitude);
+
+  const a =
+    Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2) +
+    Math.cos(toRadians(fromLatitude)) *
+      Math.cos(toRadians(toLatitude)) *
+      Math.sin(longitudeDelta / 2) *
+      Math.sin(longitudeDelta / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return earthRadiusKm * c;
 }

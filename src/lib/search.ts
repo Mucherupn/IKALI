@@ -51,19 +51,24 @@ function normalize(text: string) {
 
 export function extractSearchIntent(query: string) {
   const normalized = query.trim().replace(/\s+/g, ' ');
-  if (!normalized) return { serviceQuery: '', locationQuery: '' };
+  if (!normalized) return { serviceQuery: '', locationQuery: '', nearMe: false };
+
+  if (/\bnear me\b/i.test(normalized)) {
+    const serviceQuery = normalized.replace(/\bnear me\b/gi, '').replace(/\s+/g, ' ').trim();
+    return { serviceQuery, locationQuery: '', nearMe: true };
+  }
 
   const nearSplit = normalized.split(/\s+near\s+/i);
   if (nearSplit.length > 1) {
-    return { serviceQuery: nearSplit[0] ?? '', locationQuery: nearSplit.slice(1).join(' near ').trim() };
+    return { serviceQuery: nearSplit[0] ?? '', locationQuery: nearSplit.slice(1).join(' near ').trim(), nearMe: false };
   }
 
   const inSplit = normalized.split(/\s+in\s+/i);
   if (inSplit.length > 1) {
-    return { serviceQuery: inSplit[0] ?? '', locationQuery: inSplit.slice(1).join(' in ').trim() };
+    return { serviceQuery: inSplit[0] ?? '', locationQuery: inSplit.slice(1).join(' in ').trim(), nearMe: false };
   }
 
-  return { serviceQuery: normalized, locationQuery: '' };
+  return { serviceQuery: normalized, locationQuery: '', nearMe: false };
 }
 
 export function expandSearchTerms(input: string): string[] {

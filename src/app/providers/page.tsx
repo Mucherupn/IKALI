@@ -3,7 +3,7 @@ import { ProviderDirectory } from '@/components/provider-directory';
 import { getProviders, getServiceCategories } from '@/lib/data';
 
 type ProvidersPageProps = {
-  searchParams?: Promise<{ q?: string; location?: string }>;
+  searchParams?: Promise<{ q?: string; location?: string; nearMe?: string }>;
 };
 
 export default async function ProvidersPage({ searchParams }: ProvidersPageProps) {
@@ -26,6 +26,7 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
         searchPlaceholder="Search providers by name, service, location, or bio"
         initialQuery={params.q ?? ''}
         initialLocation={params.location ?? ''}
+        initialNearMe={params.nearMe === '1'}
         showSuggestions
       />
     </div>
