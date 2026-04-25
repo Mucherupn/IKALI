@@ -80,39 +80,40 @@ export function Navbar() {
     href === '/' ? pathname === '/' : pathname?.startsWith(href);
 
   const navLinkClass = (href: string) =>
-    `focus-ring whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-medium transition sm:text-sm ${
+    `focus-ring whitespace-nowrap rounded-md px-1 py-1 text-[11px] font-medium transition min-[390px]:px-1.5 min-[390px]:text-xs sm:px-2 sm:py-1.5 sm:text-sm ${
       isActivePath(href) ? 'text-white' : 'text-white/90 hover:text-white'
     }`;
 
   return (
     <header className="sticky top-0 z-50 bg-[var(--red)] text-white shadow-[0_10px_35px_rgba(225,29,46,0.22)]">
-      <div className="section-shell flex min-h-[72px] items-center justify-between gap-3 py-2 sm:min-h-[78px]">
+      <div className="section-shell flex min-h-[64px] items-center justify-between gap-1 py-2 min-[390px]:gap-2 sm:min-h-[78px] sm:gap-3">
         <Link
           href="/"
           aria-label="I-Kali home"
-          className="focus-ring inline-flex shrink-0 items-center rounded-xl"
+          className="focus-ring inline-flex shrink-0 items-center rounded-lg"
         >
-          <span className="inline-flex items-center rounded-xl bg-white px-3 py-2 shadow-[0_10px_25px_rgba(0,0,0,0.10)] sm:px-4 sm:py-2.5">
-            <span className="text-[1.2rem] font-black leading-none tracking-[-0.06em] text-[var(--red)] sm:text-[1.35rem]">
+          <span className="inline-flex items-center rounded-lg bg-white px-2.5 py-1.5 shadow-[0_10px_25px_rgba(0,0,0,0.10)] min-[390px]:px-3 min-[390px]:py-2 sm:rounded-xl sm:px-4 sm:py-2.5">
+            <span className="text-[1rem] font-black leading-none tracking-[-0.06em] text-[var(--red)] min-[390px]:text-[1.1rem] sm:text-[1.35rem]">
               I
             </span>
-            <span className="mx-0.5 text-[1.2rem] font-black leading-none tracking-[-0.06em] text-black sm:text-[1.35rem]">
+            <span className="mx-0.5 text-[1rem] font-black leading-none tracking-[-0.06em] text-black min-[390px]:text-[1.1rem] sm:text-[1.35rem]">
               -
             </span>
-            <span className="text-[1.2rem] font-black leading-none tracking-[-0.06em] text-[var(--red)] sm:text-[1.35rem]">
+            <span className="text-[1rem] font-black leading-none tracking-[-0.06em] text-[var(--red)] min-[390px]:text-[1.1rem] sm:text-[1.35rem]">
               Kali
             </span>
           </span>
         </Link>
 
-        <nav className="flex flex-1 items-center justify-center gap-3 px-2 sm:gap-7">
+        <nav className="flex min-w-0 flex-1 items-center justify-center gap-1 px-1 min-[390px]:gap-2 sm:gap-7 sm:px-2">
           <Link href="/services" className={navLinkClass('/services')}>
             Services
           </Link>
 
           {!authResolved ? null : !isLoggedIn ? (
             <Link href="/auth" className={navLinkClass('/auth')}>
-              Sign in / Sign up
+              <span className="hidden min-[390px]:inline">Sign in / Sign up</span>
+              <span className="min-[390px]:hidden">Sign in</span>
             </Link>
           ) : (
             <>
@@ -135,7 +136,7 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="focus-ring whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-medium text-white/90 transition hover:text-white sm:text-sm"
+                className="focus-ring whitespace-nowrap rounded-md px-1 py-1 text-[11px] font-medium text-white/90 transition hover:text-white min-[390px]:px-1.5 min-[390px]:text-xs sm:px-2 sm:py-1.5 sm:text-sm"
               >
                 Logout
               </button>
@@ -146,10 +147,11 @@ export function Navbar() {
         {authResolved && (!isLoggedIn || !isProvider) ? (
           <Link
             href="/become-a-pro"
-            className="focus-ring group inline-flex min-h-10 shrink-0 items-center rounded-full bg-black px-3 py-2 text-xs font-semibold shadow-[0_10px_25px_rgba(0,0,0,0.18)] transition hover:bg-white sm:min-h-11 sm:px-6 sm:py-3 sm:text-sm"
+            className="focus-ring group inline-flex min-h-9 shrink-0 items-center rounded-full bg-black px-2.5 py-1.5 text-[11px] font-semibold shadow-[0_10px_25px_rgba(0,0,0,0.18)] transition hover:bg-white min-[390px]:px-3 min-[390px]:text-xs sm:min-h-11 sm:px-6 sm:py-3 sm:text-sm"
           >
             <span className="text-white transition group-hover:!text-black">
-              Become a Pro
+              <span className="hidden min-[390px]:inline">Become a Pro</span>
+              <span className="min-[390px]:hidden">Pro</span>
             </span>
           </Link>
         ) : null}
