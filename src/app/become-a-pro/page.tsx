@@ -22,7 +22,7 @@ export default function BecomeAProPage() {
   }, []);
 
   const onApply = () => {
-    router.push(isLoggedIn ? '/become-a-pro/apply' : '/signup?next=/become-a-pro/apply');
+    router.push(isLoggedIn ? '/become-a-pro/apply' : '/auth?mode=signup&next=/become-a-pro/apply');
   };
 
   return (

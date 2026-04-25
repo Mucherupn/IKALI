@@ -20,6 +20,14 @@ export default function SignupPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  function toSignupErrorMessage(message: string | undefined) {
+    const normalized = message?.toLowerCase() ?? '';
+    if (normalized.includes('already') || normalized.includes('registered') || normalized.includes('exists')) {
+      return 'An account with this email already exists. Please sign in instead.';
+    }
+    return 'Unable to create account. Please review your details and try again.';
+  }
+
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage('');
@@ -45,32 +53,41 @@ export default function SignupPage() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        setErrorMessage(toSignupErrorMessage(error.message));
+        return;
+      }
 
-      if (data.user) {
-        const { error: profileError } = await supabase.from('profiles').upsert({
-          id: data.user.id,
-          role: 'customer',
-          pro_application_status: 'not_applied',
-          full_name: fullName.trim() || null,
-          phone: phone.trim() || null,
-          email: email.trim(),
-          default_location: defaultLocation.trim() || null,
-          updated_at: new Date().toISOString()
-        });
-
-        if (profileError) throw profileError;
+      if (!data.user) {
+        setErrorMessage('Unable to create account right now. Please try again.');
+        return;
       }
 
       if (!data.session) {
-        setSuccessMessage('Account created. Please confirm your email before signing in.');
+        setSuccessMessage('Account created. Please check your email to confirm your account.');
+        return;
+      }
+
+      const { error: profileError } = await supabase.from('profiles').upsert({
+        id: data.user.id,
+        role: 'customer',
+        pro_application_status: 'not_applied',
+        full_name: fullName.trim() || null,
+        phone: phone.trim() || null,
+        email: email.trim(),
+        default_location: defaultLocation.trim() || null,
+        updated_at: new Date().toISOString()
+      });
+
+      if (profileError) {
+        setSuccessMessage('Account created. Please sign in to finish setting up your profile.');
         return;
       }
 
       router.push(nextPath);
       router.refresh();
     } catch {
-      setErrorMessage('Unable to create account. Please try a different email or password.');
+      setErrorMessage('Unable to create account right now. Please try again shortly.');
     } finally {
       setIsSubmitting(false);
     }
@@ -80,7 +97,7 @@ export default function SignupPage() {
     <div className="section-shell max-w-xl py-10">
       <section className="card-premium p-6 sm:p-8">
         <p className="eyebrow">Join I Kali</p>
-        <h1 className="page-title mt-2">Create your account</h1>
+        <h1 className="page-title mt-2">Create your I-Kali account.</h1>
 
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <label className="block">
