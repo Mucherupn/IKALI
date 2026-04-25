@@ -1,4 +1,3 @@
-import { User } from '@supabase/supabase-js';
 import { Database } from '@/lib/database.types';
 import { getSupabaseClient } from '@/lib/supabase';
 import { normalizeEmail, normalizeKenyanPhone, normalizeLocation, normalizeName } from '@/lib/validation';
@@ -10,6 +9,18 @@ export type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
 export function isValidUserRole(value: string | null | undefined): value is UserRole {
   return USER_ROLES.includes((value ?? '') as UserRole);
+}
+
+
+export function formatSupabaseError(error: {
+  message?: string;
+  details?: string;
+  hint?: string;
+  code?: string;
+} | null | undefined) {
+  if (!error) return 'Unknown Supabase error';
+
+  return [error.message, error.details, error.hint, error.code].filter(Boolean).join(' | ');
 }
 
 export function getRedirectForProfile(profile: Pick<ProfileRow, 'role'> | null, next?: string | null) {
@@ -55,16 +66,29 @@ export async function getCurrentProfile(userId?: string) {
   return profile;
 }
 
-export async function ensureCustomerProfile(
-  user: User,
-  formData?: {
-    full_name?: string;
-    phone?: string;
-    email?: string;
-    default_location?: string;
-  }
-) {
+export async function ensureCustomerProfile(formData?: {
+  full_name?: string;
+  phone?: string;
+  email?: string;
+  default_location?: string;
+}) {
   const supabase = getSupabaseClient();
+  const {
+    data: { user },
+    error: userError
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    console.error('ensureCustomerProfile getUser error', formatSupabaseError(userError));
+    return { profile: null, error: userError };
+  }
+
+  if (!user) {
+    const missingUserError = new Error('No authenticated user available for profile setup.');
+    console.error('ensureCustomerProfile missing user', missingUserError.message);
+    return { profile: null, error: missingUserError };
+  }
+
   const fallbackEmail = formData?.email ? normalizeEmail(formData.email) : user.email ?? null;
 
   const payload: Database['public']['Tables']['profiles']['Insert'] = {
@@ -79,42 +103,20 @@ export async function ensureCustomerProfile(
 
   const { error: upsertError } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' });
   if (upsertError) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('ensureCustomerProfile upsert error', upsertError);
-    }
+    console.error('ensureCustomerProfile upsert error', formatSupabaseError(upsertError));
     return { profile: null, error: upsertError };
   }
 
   const { data: profile, error: fetchError } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
-  if (fetchError || !profile) {
-    if (process.env.NODE_ENV === 'development' && fetchError) {
-      console.error('ensureCustomerProfile fetch error', fetchError);
-    }
+  if (fetchError) {
+    console.error('ensureCustomerProfile fetch error', formatSupabaseError(fetchError));
+    return { profile: null, error: fetchError };
+  }
 
-    const basicPayload: Database['public']['Tables']['profiles']['Insert'] = {
-      id: user.id,
-      role: 'customer',
-      email: fallbackEmail,
-      pro_application_status: 'not_applied'
-    };
-
-    const { error: fallbackUpsertError } = await supabase.from('profiles').upsert(basicPayload, { onConflict: 'id' });
-    if (fallbackUpsertError) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('ensureCustomerProfile fallback upsert error', fallbackUpsertError);
-      }
-      return { profile: null, error: fallbackUpsertError };
-    }
-
-    const { data: fallbackProfile, error: fallbackFetchError } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
-    if (fallbackFetchError || !fallbackProfile) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('ensureCustomerProfile fallback fetch error', fallbackFetchError);
-      }
-      return { profile: null, error: fallbackFetchError ?? fetchError ?? new Error('Profile fetch failed after upsert.') };
-    }
-
-    return { profile: fallbackProfile, error: null };
+  if (!profile) {
+    const missingProfileError = new Error('Profile fetch succeeded but returned no profile row.');
+    console.error('ensureCustomerProfile missing profile', missingProfileError.message);
+    return { profile: null, error: missingProfileError };
   }
 
   return { profile, error: null };
