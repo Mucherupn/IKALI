@@ -180,7 +180,8 @@ export default function SignupPage() {
       if (isDevelopment) {
         console.error('Signup unexpected error', error);
       }
-      setErrorMessage('Unable to create account right now. Please try again shortly.');
+      const fallbackMessage = error instanceof Error ? toSignupErrorMessage(error.message) : 'Unable to create account right now. Please try again shortly.';
+      setErrorMessage(fallbackMessage);
     } finally {
       setIsSubmitting(false);
     }
