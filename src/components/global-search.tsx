@@ -1,9 +1,9 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ServiceCategory } from '@/lib/types';
-import { extractSearchIntent, POPULAR_LOCATIONS, resolveServiceSlug, SUGGESTED_SEARCHES } from '@/lib/search';
+import { extractSearchIntent, resolveServiceSlug } from '@/lib/search';
 
 type GlobalSearchProps = {
   services: ServiceCategory[];
@@ -13,25 +13,26 @@ export function GlobalSearch({ services }: GlobalSearchProps) {
   const router = useRouter();
   const [query, setQuery] = useState('');
 
-  const sortedLocations = useMemo(() => [...POPULAR_LOCATIONS], []);
-
   const routeSearch = (rawQuery: string) => {
     const trimmed = rawQuery.trim();
+
     if (!trimmed) {
       router.push('/providers');
       return;
     }
 
-    const { serviceQuery, locationQuery } = extractSearchIntent(trimmed);
+    const { serviceQuery, locationQuery, nearMe } = extractSearchIntent(trimmed);
     const serviceSlug = resolveServiceSlug(serviceQuery || trimmed, services);
 
     if (serviceSlug) {
-      if (locationQuery) {
-        router.push(`/services/${serviceSlug}?location=${encodeURIComponent(locationQuery)}`);
-        return;
-      }
+      const params = new URLSearchParams();
 
-      router.push(`/services/${serviceSlug}`);
+      if (locationQuery) params.set('location', locationQuery);
+      if (nearMe) params.set('nearMe', '1');
+
+      const queryString = params.toString();
+
+      router.push(`/services/${serviceSlug}${queryString ? `?${queryString}` : ''}`);
       return;
     }
 
@@ -44,50 +45,26 @@ export function GlobalSearch({ services }: GlobalSearchProps) {
   };
 
   return (
-    <div className="mt-8 rounded-2xl bg-white/10 p-4 backdrop-blur sm:p-5">
-      <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row">
+    <form
+      onSubmit={onSubmit}
+      className="mx-auto w-full max-w-4xl rounded-[1.4rem] border border-[#e8e8e8] bg-white p-2 shadow-[0_20px_60px_rgba(17,17,17,0.10)]"
+    >
+      <div className="flex flex-col gap-2 sm:flex-row">
         <input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Try: plumber in Karen"
-          className="focus-ring min-h-11 w-full rounded-xl border border-white/30 bg-white/95 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500"
+          placeholder="What service do you need today?"
+          className="min-h-[4.2rem] flex-1 rounded-[1.1rem] border-none bg-[#f7f7f7] px-5 text-base font-medium text-[#111111] outline-none placeholder:text-[#888888] focus:bg-white focus:ring-4 focus:ring-[#e11d2e]/10"
         />
+
         <button
           type="submit"
-          className="focus-ring min-h-11 rounded-xl bg-[#111827] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#080808]"
+          className="min-h-[4.2rem] rounded-[1.1rem] bg-[var(--red)] px-8 text-base font-semibold text-white transition hover:bg-[var(--red-dark)] sm:min-w-[150px]"
         >
           Search
         </button>
-      </form>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-        <span className="font-semibold text-red-100">Suggested:</span>
-        {SUGGESTED_SEARCHES.map((suggestion) => (
-          <button
-            key={suggestion}
-            type="button"
-            onClick={() => routeSearch(suggestion)}
-            className="focus-ring rounded-full border border-red-200/40 bg-[#D71920]/30 px-3 py-1 text-red-100 hover:bg-[#D71920]/50"
-          >
-            {suggestion}
-          </button>
-        ))}
       </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-        <span className="font-semibold text-red-100">Popular locations:</span>
-        {sortedLocations.map((location) => (
-          <button
-            key={location}
-            type="button"
-            onClick={() => routeSearch(`providers in ${location}`)}
-            className="focus-ring rounded-full border border-red-200/40 px-3 py-1 text-red-100 hover:bg-[#D71920]/40"
-          >
-            {location}
-          </button>
-        ))}
-      </div>
-    </div>
+    </form>
   );
 }
