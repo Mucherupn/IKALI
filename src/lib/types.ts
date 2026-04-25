@@ -31,6 +31,11 @@ export type Provider = {
   latitude?: number;
   longitude?: number;
   isAvailable?: boolean;
+  unpaidBalance?: number;
+  paymentSpeedScore?: number;
+  providerStanding?: 'good_standing' | 'owing' | 'restricted' | 'override';
+  jobsAllowedBeforePayment?: number;
+  adminOverride?: boolean;
 };
 
 export type ProviderReview = {

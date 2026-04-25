@@ -122,8 +122,33 @@ export function ProviderDirectory({
         const availableScoreA = a.isAvailable === false ? 0 : 1;
         const availableScoreB = b.isAvailable === false ? 0 : 1;
         if (availableScoreA !== availableScoreB) return availableScoreB - availableScoreA;
+
+        const restrictedScoreA = a.providerStanding === 'restricted' ? 0 : 1;
+        const restrictedScoreB = b.providerStanding === 'restricted' ? 0 : 1;
+        if (restrictedScoreA !== restrictedScoreB) return restrictedScoreB - restrictedScoreA;
+
         if (a.verified !== b.verified) return Number(b.verified) - Number(a.verified);
         if (a.rating !== b.rating) return b.rating - a.rating;
+        const unpaidA = a.unpaidBalance ?? 0;
+        const unpaidB = b.unpaidBalance ?? 0;
+        if (unpaidA !== unpaidB) return unpaidA - unpaidB;
+
+        const paymentSpeedA = a.paymentSpeedScore ?? 0;
+        const paymentSpeedB = b.paymentSpeedScore ?? 0;
+        if (paymentSpeedA !== paymentSpeedB) return paymentSpeedB - paymentSpeedA;
+
+        if (userCoords) {
+          const distanceA =
+            a.latitude !== undefined && a.longitude !== undefined
+              ? calculateDistanceKm(userCoords.latitude, userCoords.longitude, a.latitude, a.longitude)
+              : Number.POSITIVE_INFINITY;
+          const distanceB =
+            b.latitude !== undefined && b.longitude !== undefined
+              ? calculateDistanceKm(userCoords.latitude, userCoords.longitude, b.latitude, b.longitude)
+              : Number.POSITIVE_INFINITY;
+          if (distanceA !== distanceB) return distanceA - distanceB;
+        }
+
         return b.completedJobs - a.completedJobs;
       });
     };

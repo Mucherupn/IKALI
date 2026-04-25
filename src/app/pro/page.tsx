@@ -11,6 +11,8 @@ type JobRequestRow = Database['public']['Tables']['job_requests']['Row'];
 type JobCompletionRow = Database['public']['Tables']['job_completions']['Row'];
 type ProviderRow = Database['public']['Tables']['providers']['Row'];
 type ServiceCategoryRow = Database['public']['Tables']['service_categories']['Row'];
+type ProviderAccountRow = Database['public']['Tables']['provider_accounts']['Row'];
+type ProviderLedgerRow = Database['public']['Tables']['provider_ledger']['Row'];
 
 type ProfileForm = {
   bio: string;
@@ -21,7 +23,6 @@ type ProfileForm = {
   portfolio_images: string;
 };
 
-const COMMISSION_RATE = 0.1;
 const SIGNIFICANT_DIFFERENCE_THRESHOLD = 500;
 
 type ProviderCompletionForm = {
@@ -78,6 +79,8 @@ export default function ProPage() {
   const [dropReason, setDropReason] = useState('');
   const [manualPaymentMessage, setManualPaymentMessage] = useState('');
   const [providerCompletionFormByJob, setProviderCompletionFormByJob] = useState<Record<string, ProviderCompletionForm>>({});
+  const [providerAccount, setProviderAccount] = useState<ProviderAccountRow | null>(null);
+  const [providerLedger, setProviderLedger] = useState<ProviderLedgerRow[]>([]);
 
   const [profileForm, setProfileForm] = useState<ProfileForm>({
     bio: '',
@@ -136,14 +139,16 @@ export default function ProPage() {
         return;
       }
 
-      const [providerServicesRes, jobsRes, completionsRes] = await Promise.all([
+      const [providerServicesRes, jobsRes, completionsRes, providerAccountRes, providerLedgerRes] = await Promise.all([
         supabase.from('provider_services').select('service_category_id').eq('provider_id', providerRow.id),
         supabase.from('job_requests').select('*').order('created_at', { ascending: false }),
-        supabase.from('job_completions').select('*')
+        supabase.from('job_completions').select('*'),
+        supabase.from('provider_accounts').select('*').eq('provider_id', providerRow.id).maybeSingle(),
+        supabase.from('provider_ledger').select('*').eq('provider_id', providerRow.id).order('created_at', { ascending: false })
       ]);
 
-      if (providerServicesRes.error || jobsRes.error || completionsRes.error) {
-        throw providerServicesRes.error ?? jobsRes.error ?? completionsRes.error;
+      if (providerServicesRes.error || jobsRes.error || completionsRes.error || providerAccountRes.error || providerLedgerRes.error) {
+        throw providerServicesRes.error ?? jobsRes.error ?? completionsRes.error ?? providerAccountRes.error ?? providerLedgerRes.error;
       }
 
       const selectedIds = (providerServicesRes.data ?? []).map((item) => item.service_category_id);
@@ -154,6 +159,8 @@ export default function ProPage() {
         completionLookup[completion.job_request_id] = completion;
       }
       setJobCompletionsByJobId(completionLookup);
+      setProviderAccount(providerAccountRes.data ?? null);
+      setProviderLedger(providerLedgerRes.data ?? []);
 
       setProfileForm((current) => ({
         ...current,
@@ -219,9 +226,10 @@ export default function ProPage() {
 
   const providerStatus: ProviderStatus = useMemo(() => {
     if (!provider || !provider.is_verified) return 'restricted';
+    if (providerAccount?.status === 'restricted' && !provider.commission_override) return 'restricted';
     if (activeJob) return 'engaged';
     return 'available';
-  }, [provider, activeJob]);
+  }, [provider, activeJob, providerAccount]);
 
   const paymentSummary = useMemo(() => {
     const completedRevenue = completedJobs.reduce((total, job) => {
@@ -229,23 +237,11 @@ export default function ProPage() {
       return total + Number(completion?.final_amount_used ?? completion?.provider_reported_amount ?? job.payment_amount ?? 0);
     }, 0);
 
-    const commissionsPaid = completedJobs
-      .filter((job) => job.payment_status === 'paid')
-      .reduce((total, job) => {
-        const completion = jobCompletionsByJobId[job.id];
-        const amount = Number(completion?.final_amount_used ?? completion?.provider_reported_amount ?? job.payment_amount ?? 0);
-        return total + amount * COMMISSION_RATE;
-      }, 0);
-
-    const commissionsOwed = completedJobs
-      .filter((job) => job.payment_status !== 'paid')
-      .reduce((total, job) => {
-        const completion = jobCompletionsByJobId[job.id];
-        const amount = Number(completion?.final_amount_used ?? completion?.provider_reported_amount ?? job.payment_amount ?? 0);
-        return total + amount * COMMISSION_RATE;
-      }, 0);
-
-    const accountBalance = completedRevenue - completedRevenue * COMMISSION_RATE;
+    const commissionsPaid = providerLedger
+      .filter((entry) => entry.type === 'payment_received')
+      .reduce((total, entry) => total + Number(entry.amount ?? 0), 0);
+    const commissionsOwed = Math.max(Number(providerAccount?.commission_balance ?? 0) - Number(providerAccount?.credit_balance ?? 0), 0);
+    const accountBalance = Number(providerAccount?.credit_balance ?? 0);
 
     return {
       completedRevenue,
@@ -253,7 +249,7 @@ export default function ProPage() {
       commissionsPaid,
       accountBalance
     };
-  }, [completedJobs, jobCompletionsByJobId]);
+  }, [completedJobs, jobCompletionsByJobId, providerAccount, providerLedger]);
 
   const serviceNameById = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
 
