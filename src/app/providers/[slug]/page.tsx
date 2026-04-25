@@ -59,7 +59,7 @@ export default async function ProviderDetailPage({ params }: { params: Promise<{
                 {serviceName} · {provider.location}
               </p>
 
-              <dl className="grid grid-cols-2 gap-3 pt-1 sm:grid-cols-4">
+              <dl className="grid grid-cols-2 gap-3 pt-1 sm:grid-cols-5">
                 <div className="rounded-xl bg-white/10 p-3">
                   <dt className="text-xs text-slate-200">Average rating</dt>
                   <dd className="text-lg font-semibold">⭐ {provider.rating.toFixed(1)}</dd>
@@ -75,6 +75,10 @@ export default async function ProviderDetailPage({ params }: { params: Promise<{
                 <div className="rounded-xl bg-white/10 p-3">
                   <dt className="text-xs text-slate-200">Experience</dt>
                   <dd className="text-lg font-semibold">{provider.experienceYears} yrs</dd>
+                </div>
+                <div className="rounded-xl bg-white/10 p-3">
+                  <dt className="text-xs text-slate-200">Typical charge</dt>
+                  <dd className="text-sm font-semibold">{provider.typicalChargeRange ?? 'Pending data'}</dd>
                 </div>
               </dl>
             </div>

@@ -36,6 +36,8 @@ function normalizeProvider(provider: {
   availability_text?: string | null;
   serviceSlug: string;
   reviews: number;
+  ratingAverage?: number;
+  typicalChargeRange?: string;
   latitude?: number | null;
   longitude?: number | null;
   is_available?: boolean | null;
@@ -51,9 +53,10 @@ function normalizeProvider(provider: {
     skills: [],
     experienceYears: provider.years_experience,
     verified: provider.is_verified,
-    rating: Number(provider.rating ?? 0),
+    rating: Number(provider.ratingAverage ?? provider.rating ?? 0),
     completedJobs: provider.completed_jobs ?? 0,
     priceGuide: provider.price_guide ?? undefined,
+    typicalChargeRange: provider.typicalChargeRange,
     availability: provider.availability_text ?? 'Contact for availability',
     reviews: provider.reviews,
     reviewCount: provider.reviews,
@@ -115,10 +118,35 @@ export async function getProviders(): Promise<Provider[]> {
       }
     }
 
+    const [reviewsRes, jobsRes, completionsRes] = await Promise.all([
+      supabase.from('reviews').select('reviewee_id, rating, reviewer_role').eq('reviewer_role', 'customer'),
+      supabase.from('job_requests').select('id, provider_id'),
+      supabase.from('job_completions').select('job_request_id, final_amount_used')
+    ]);
+    if (reviewsRes.error || jobsRes.error || completionsRes.error) {
+      return mockProviders;
+    }
+
     const reviewsCountByProvider = new Map<string, number>();
-    const { data: reviewRows } = await supabase.from('reviews').select('provider_id');
-    for (const review of reviewRows ?? []) {
-      reviewsCountByProvider.set(review.provider_id, (reviewsCountByProvider.get(review.provider_id) ?? 0) + 1);
+    const reviewsSumByProvider = new Map<string, number>();
+    for (const review of reviewsRes.data ?? []) {
+      const providerId = review.reviewee_id;
+      reviewsCountByProvider.set(providerId, (reviewsCountByProvider.get(providerId) ?? 0) + 1);
+      reviewsSumByProvider.set(providerId, (reviewsSumByProvider.get(providerId) ?? 0) + Number(review.rating ?? 0));
+    }
+
+    const providerByJobId = new Map<string, string>();
+    for (const job of jobsRes.data ?? []) {
+      if (job.provider_id) providerByJobId.set(job.id, job.provider_id);
+    }
+    const completionAmountsByProvider = new Map<string, number[]>();
+    for (const completion of completionsRes.data ?? []) {
+      const providerId = providerByJobId.get(completion.job_request_id);
+      const amount = Number(completion.final_amount_used ?? 0);
+      if (!providerId || !Number.isFinite(amount) || amount <= 0) continue;
+      const current = completionAmountsByProvider.get(providerId) ?? [];
+      current.push(amount);
+      completionAmountsByProvider.set(providerId, current);
     }
 
     const mapped = providerRows
@@ -126,10 +154,20 @@ export async function getProviders(): Promise<Provider[]> {
         const serviceSlug = providerToServiceSlug.get(provider.id);
         if (!serviceSlug) return null;
 
+        const reviewCount = reviewsCountByProvider.get(provider.id) ?? 0;
+        const reviewAvg = reviewCount > 0 ? (reviewsSumByProvider.get(provider.id) ?? 0) / reviewCount : Number(provider.rating ?? 0);
+        const completionAmounts = completionAmountsByProvider.get(provider.id) ?? [];
+        const typicalChargeRange =
+          completionAmounts.length > 0
+            ? `KES ${Math.min(...completionAmounts).toLocaleString()} - KES ${Math.max(...completionAmounts).toLocaleString()}`
+            : undefined;
+
         return normalizeProvider({
           ...provider,
           serviceSlug,
-          reviews: reviewsCountByProvider.get(provider.id) ?? 0
+          reviews: reviewCount,
+          ratingAverage: reviewAvg,
+          typicalChargeRange
         });
       })
       .filter((provider): provider is Provider => provider !== null);

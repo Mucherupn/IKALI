@@ -24,6 +24,7 @@ export type Provider = {
   completedJobs: number;
   responseTime?: string;
   priceGuide?: string;
+  typicalChargeRange?: string;
   availability: string;
   reviews: number;
   reviewCount?: number;

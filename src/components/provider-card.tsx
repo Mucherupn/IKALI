@@ -32,6 +32,7 @@ export function ProviderCard({ provider, serviceName, distanceKm }: { provider: 
           <span className="rounded-lg bg-slate-100 px-2.5 py-2">⭐ {provider.rating.toFixed(1)}</span>
           <span className="rounded-lg bg-slate-100 px-2.5 py-2">{provider.completedJobs} jobs</span>
           <span className="rounded-lg bg-slate-100 px-2.5 py-2">{reviewCount} reviews</span>
+          <span className="rounded-lg bg-slate-100 px-2.5 py-2">{provider.typicalChargeRange ?? 'Charge range pending'}</span>
           <span className="rounded-lg bg-slate-100 px-2.5 py-2">{provider.isAvailable === false ? 'Currently unavailable' : provider.availability}</span>
         </div>
 
