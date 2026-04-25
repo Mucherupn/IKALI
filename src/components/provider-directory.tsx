@@ -16,6 +16,8 @@ type ProviderDirectoryProps = {
   showSuggestions?: boolean;
 };
 
+const LOCATION_SUGGESTIONS = ['Karen', 'Kilimani', 'Westlands', 'Kileleshwa', 'Langata', 'Rongai'] as const;
+
 export function ProviderDirectory({
   providers,
   serviceNamesBySlug,
@@ -27,22 +29,21 @@ export function ProviderDirectory({
 }: ProviderDirectoryProps) {
   const intent = extractSearchIntent(initialQuery);
   const [query, setQuery] = useState(initialQuery);
-  const [selectedLocation, setSelectedLocation] = useState(initialLocation || intent.locationQuery || 'all');
+  const [selectedLocation, setSelectedLocation] = useState(initialLocation || intent.locationQuery || '');
   const [minimumRating, setMinimumRating] = useState('all');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
 
-  const areas = useMemo(() => {
-    const unique = new Set<string>(POPULAR_LOCATIONS);
-    for (const provider of providers) {
-      const primaryArea = provider.location.split(',')[0]?.trim();
-      if (primaryArea) unique.add(primaryArea);
-    }
-    return Array.from(unique).sort((a, b) => a.localeCompare(b));
-  }, [providers]);
+  const matchingLocationSuggestions = useMemo(() => {
+    const normalized = selectedLocation.trim().toLowerCase();
+
+    if (!normalized) return [];
+
+    return LOCATION_SUGGESTIONS.filter((location) => location.toLowerCase().includes(normalized)).slice(0, 6);
+  }, [selectedLocation]);
 
   const filteredProviders = useMemo(() => {
     const parsedQuery = extractSearchIntent(query);
-    const normalizedLocationSearch = (selectedLocation === 'all' ? parsedQuery.locationQuery : selectedLocation).trim().toLowerCase();
+    const normalizedLocationSearch = (selectedLocation || parsedQuery.locationQuery).trim().toLowerCase();
 
     return providers.filter((provider) => {
       const serviceName = serviceNamesBySlug?.[provider.serviceCategory] ?? provider.serviceCategory;
@@ -58,7 +59,7 @@ export function ProviderDirectory({
 
   const clearFilters = () => {
     setQuery('');
-    setSelectedLocation('all');
+    setSelectedLocation('');
     setMinimumRating('all');
     setVerifiedOnly(false);
   };
@@ -82,21 +83,34 @@ export function ProviderDirectory({
             </label>
           ) : null}
 
-          <label>
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">Location</span>
-            <select
+          <div>
+            <label htmlFor="location-filter" className="mb-1.5 block text-sm font-medium text-slate-700">
+              Location
+            </label>
+            <input
+              id="location-filter"
+              type="text"
               value={selectedLocation}
               onChange={(event) => setSelectedLocation(event.target.value)}
+              placeholder="Type location e.g. Karen"
               className="focus-ring w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
-            >
-              <option value="all">All Nairobi</option>
-              {areas.map((area) => (
-                <option key={area} value={area}>
-                  {area}
-                </option>
-              ))}
-            </select>
-          </label>
+              autoComplete="off"
+            />
+            {matchingLocationSuggestions.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {matchingLocationSuggestions.map((location) => (
+                  <button
+                    key={location}
+                    type="button"
+                    onClick={() => setSelectedLocation(location)}
+                    className="focus-ring rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  >
+                    {location}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
 
           <label>
             <span className="mb-1.5 block text-sm font-medium text-slate-700">Rating</span>
