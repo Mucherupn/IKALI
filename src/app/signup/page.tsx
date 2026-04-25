@@ -1,0 +1,147 @@
+'use client';
+
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { FormEvent, useState } from 'react';
+import { USER_ROLES, UserRole } from '@/lib/auth';
+import { getSupabaseClient } from '@/lib/supabase';
+
+export default function SignupPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get('next') || '/account';
+
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [defaultLocation, setDefaultLocation] = useState('');
+  const [role, setRole] = useState<UserRole>('customer');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+    setIsSubmitting(true);
+
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            role
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        const { error: profileError } = await supabase.from('profiles').upsert({
+          id: data.user.id,
+          role,
+          full_name: fullName.trim() || null,
+          phone: phone.trim() || null,
+          email: email.trim(),
+          default_location: defaultLocation.trim() || null,
+          updated_at: new Date().toISOString()
+        });
+
+        if (profileError) throw profileError;
+      }
+
+      if (!data.session) {
+        setSuccessMessage('Account created. Check your email to confirm your account before logging in.');
+        return;
+      }
+
+      router.push(nextPath);
+      router.refresh();
+    } catch {
+      setErrorMessage('Unable to create account. Please try a different email or password.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="section-shell max-w-xl py-10">
+      <section className="card-premium p-6 sm:p-8">
+        <p className="eyebrow">Join I Kali</p>
+        <h1 className="page-title mt-2">Create your account</h1>
+
+        <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">Full name</span>
+            <input value={fullName} onChange={(event) => setFullName(event.target.value)} className="focus-ring input-field" placeholder="Your name" />
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">Role</span>
+            <select value={role} onChange={(event) => setRole(event.target.value as UserRole)} className="focus-ring input-field">
+              {USER_ROLES.map((availableRole) => (
+                <option key={availableRole} value={availableRole}>
+                  {availableRole}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">Phone</span>
+              <input value={phone} onChange={(event) => setPhone(event.target.value)} className="focus-ring input-field" placeholder="+254..." />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">Default location</span>
+              <input
+                value={defaultLocation}
+                onChange={(event) => setDefaultLocation(event.target.value)}
+                className="focus-ring input-field"
+                placeholder="Nairobi"
+              />
+            </label>
+          </div>
+
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">Email</span>
+            <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="focus-ring input-field" />
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">Password</span>
+            <input
+              type="password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className="focus-ring input-field"
+            />
+          </label>
+
+          {errorMessage ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{errorMessage}</p> : null}
+          {successMessage ? <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700 ring-1 ring-emerald-100">{successMessage}</p> : null}
+
+          <button type="submit" disabled={isSubmitting} className="focus-ring btn btn-primary min-h-11 w-full disabled:opacity-60">
+            {isSubmitting ? 'Creating account...' : 'Sign up'}
+          </button>
+        </form>
+
+        <p className="mt-5 text-sm text-slate-600">
+          Already registered?{' '}
+          <Link href={`/login?next=${encodeURIComponent(nextPath)}`} className="font-semibold text-[#D71920] hover:text-[#A80F1A]">
+            Log in
+          </Link>
+        </p>
+      </section>
+    </div>
+  );
+}

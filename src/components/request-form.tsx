@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { providers as mockProviders, serviceCategories as mockServiceCategories } from '@/data/mock-data';
+import { isValidUserRole } from '@/lib/auth';
 import { Database } from '@/lib/database.types';
 import { getSupabaseClient } from '@/lib/supabase';
 
@@ -46,6 +47,9 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [dataWarning, setDataWarning] = useState('');
+  const [authReady, setAuthReady] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [canBookAsCustomer, setCanBookAsCustomer] = useState(false);
 
   const [formData, setFormData] = useState<RequestFormData>({
     ...initialFormState,
@@ -59,6 +63,26 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
     async function loadSupabaseOptions() {
       try {
         const supabase = getSupabaseClient();
+        const {
+          data: { session }
+        } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          setIsAuthenticated(true);
+          const { data: profile } = await supabase.from('profiles').select('role, full_name, phone').eq('id', session.user.id).maybeSingle();
+          const role = isValidUserRole(profile?.role) ? profile.role : null;
+          setCanBookAsCustomer(role === 'customer' || role === 'admin');
+          setFormData((current) => ({
+            ...current,
+            customerName: current.customerName || profile?.full_name || session.user.user_metadata?.full_name || '',
+            phoneNumber: current.phoneNumber || profile?.phone || ''
+          }));
+        } else {
+          setIsAuthenticated(false);
+          setCanBookAsCustomer(false);
+        }
+
+        setAuthReady(true);
 
         const [{ data: serviceRows, error: servicesError }, { data: providerRows, error: providersError }] = await Promise.all([
           supabase.from('service_categories').select('id, name, slug').eq('is_active', true).order('name'),
@@ -81,6 +105,7 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
         }
       } catch {
         setDataWarning('Live data is currently unavailable. You can still submit your request.');
+        setAuthReady(true);
       }
     }
 
@@ -98,6 +123,16 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!isAuthenticated) {
+      setSubmitError('Please log in before submitting a booking request.');
+      return;
+    }
+
+    if (!canBookAsCustomer) {
+      setSubmitError('Only customer accounts can submit bookings. Update your role in Account settings.');
+      return;
+    }
 
     if (!formData.customerName.trim() || !formData.phoneNumber.trim() || !formData.serviceSlug || !formData.location.trim()) {
       return;
@@ -354,13 +389,24 @@ export function RequestForm({ initialService, initialProvider }: { initialServic
         I Kali uses your contact details only to connect you with a suitable professional.
       </p>
 
+
+      {!authReady ? <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200">Checking account access...</p> : null}
+      {authReady && !isAuthenticated ? (
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200">
+          You can browse publicly, but you must <Link href={`/login?next=${encodeURIComponent('/request')}`} className="font-semibold underline">log in</Link> to submit a booking.
+        </p>
+      ) : null}
+      {authReady && isAuthenticated && !canBookAsCustomer ? (
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200">Only customer accounts can submit booking requests.</p>
+      ) : null}
+
       {dataWarning ? <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200">{dataWarning}</p> : null}
       {submitError ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{submitError}</p> : null}
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.10)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || !authReady || !isAuthenticated || !canBookAsCustomer}
           className="focus-ring btn btn-primary inline-flex min-h-12 w-full items-center justify-center disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? 'Submitting booking request...' : `Request a booking for ${selectedServiceName}`}
