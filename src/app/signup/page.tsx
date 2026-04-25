@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useState } from 'react';
-import { USER_ROLES, UserRole } from '@/lib/auth';
 import { getSupabaseClient } from '@/lib/supabase';
 
 export default function SignupPage() {
@@ -14,9 +13,9 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [defaultLocation, setDefaultLocation] = useState('');
-  const [role, setRole] = useState<UserRole>('customer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -25,6 +24,12 @@ export default function SignupPage() {
     event.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
+
+    if (password !== confirmPassword) {
+      setErrorMessage('Password and confirm password must match.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -35,7 +40,7 @@ export default function SignupPage() {
         options: {
           data: {
             full_name: fullName.trim(),
-            role
+            role: 'customer'
           }
         }
       });
@@ -45,7 +50,8 @@ export default function SignupPage() {
       if (data.user) {
         const { error: profileError } = await supabase.from('profiles').upsert({
           id: data.user.id,
-          role,
+          role: 'customer',
+          pro_application_status: 'not_applied',
           full_name: fullName.trim() || null,
           phone: phone.trim() || null,
           email: email.trim(),
@@ -57,7 +63,7 @@ export default function SignupPage() {
       }
 
       if (!data.session) {
-        setSuccessMessage('Account created. Check your email to confirm your account before logging in.');
+        setSuccessMessage('Account created. Please confirm your email before signing in.');
         return;
       }
 
@@ -78,53 +84,35 @@ export default function SignupPage() {
 
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">Full name</span>
-            <input value={fullName} onChange={(event) => setFullName(event.target.value)} className="focus-ring input-field" placeholder="Your name" />
-          </label>
-
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">Role</span>
-            <select value={role} onChange={(event) => setRole(event.target.value as UserRole)} className="focus-ring input-field">
-              {USER_ROLES.map((availableRole) => (
-                <option key={availableRole} value={availableRole}>
-                  {availableRole}
-                </option>
-              ))}
-            </select>
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">Full name*</span>
+            <input required value={fullName} onChange={(event) => setFullName(event.target.value)} className="focus-ring input-field" placeholder="Your name" />
           </label>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">Phone</span>
-              <input value={phone} onChange={(event) => setPhone(event.target.value)} className="focus-ring input-field" placeholder="+254..." />
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">Phone number*</span>
+              <input required value={phone} onChange={(event) => setPhone(event.target.value)} className="focus-ring input-field" placeholder="+254..." />
             </label>
 
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">Default location</span>
-              <input
-                value={defaultLocation}
-                onChange={(event) => setDefaultLocation(event.target.value)}
-                className="focus-ring input-field"
-                placeholder="Nairobi"
-              />
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">Location*</span>
+              <input required value={defaultLocation} onChange={(event) => setDefaultLocation(event.target.value)} className="focus-ring input-field" placeholder="Nairobi" />
             </label>
           </div>
 
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">Email</span>
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">Email*</span>
             <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="focus-ring input-field" />
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">Password</span>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="focus-ring input-field"
-            />
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">Password*</span>
+            <input type="password" required minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} className="focus-ring input-field" />
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">Confirm password*</span>
+            <input type="password" required minLength={6} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="focus-ring input-field" />
           </label>
 
           {errorMessage ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{errorMessage}</p> : null}
@@ -138,7 +126,7 @@ export default function SignupPage() {
         <p className="mt-5 text-sm text-slate-600">
           Already registered?{' '}
           <Link href={`/login?next=${encodeURIComponent(nextPath)}`} className="font-semibold text-[#D71920] hover:text-[#A80F1A]">
-            Log in
+            Sign in
           </Link>
         </p>
       </section>

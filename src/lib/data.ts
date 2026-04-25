@@ -107,6 +107,9 @@ export async function getProviders(): Promise<Provider[]> {
       supabase
         .from('providers')
         .select('*')
+        .eq('approval_status', 'approved')
+        .eq('is_public', true)
+        .neq('provider_status', 'suspended')
         .order('rating', { ascending: false }),
       supabase
         .from('provider_services')

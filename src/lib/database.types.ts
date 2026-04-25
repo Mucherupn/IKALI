@@ -58,6 +58,10 @@ export type Database = {
           availability_text: string | null;
           is_featured: boolean;
           commission_override: boolean;
+          is_public: boolean;
+          approval_status: string;
+          provider_status: string;
+          user_id: string | null;
           created_at: string;
         },
         {
@@ -78,6 +82,10 @@ export type Database = {
           availability_text?: string | null;
           is_featured?: boolean;
           commission_override?: boolean;
+          is_public?: boolean;
+          approval_status?: string;
+          provider_status?: string;
+          user_id?: string | null;
           created_at?: string;
         },
         {
@@ -98,7 +106,82 @@ export type Database = {
           availability_text?: string | null;
           is_featured?: boolean;
           commission_override?: boolean;
+          is_public?: boolean;
+          approval_status?: string;
+          provider_status?: string;
+          user_id?: string | null;
           created_at?: string;
+        }
+      >;
+      pro_applications: TableDef<
+        {
+          id: string;
+          user_id: string;
+          full_name: string;
+          email: string;
+          phone: string;
+          main_service_category_id: string | null;
+          other_services: string | null;
+          service_areas: string;
+          years_experience: number;
+          bio: string;
+          availability: string;
+          location: string;
+          profile_photo_url: string;
+          proof_document_url: string | null;
+          portfolio_notes: string | null;
+          price_guide: string | null;
+          status: string;
+          admin_notes: string | null;
+          rejection_reason: string | null;
+          created_at: string;
+          updated_at: string;
+        },
+        {
+          id?: string;
+          user_id: string;
+          full_name: string;
+          email: string;
+          phone: string;
+          main_service_category_id?: string | null;
+          other_services?: string | null;
+          service_areas: string;
+          years_experience?: number;
+          bio: string;
+          availability: string;
+          location: string;
+          profile_photo_url: string;
+          proof_document_url?: string | null;
+          portfolio_notes?: string | null;
+          price_guide?: string | null;
+          status?: string;
+          admin_notes?: string | null;
+          rejection_reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        },
+        {
+          id?: string;
+          user_id?: string;
+          full_name?: string;
+          email?: string;
+          phone?: string;
+          main_service_category_id?: string | null;
+          other_services?: string | null;
+          service_areas?: string;
+          years_experience?: number;
+          bio?: string;
+          availability?: string;
+          location?: string;
+          profile_photo_url?: string;
+          proof_document_url?: string | null;
+          portfolio_notes?: string | null;
+          price_guide?: string | null;
+          status?: string;
+          admin_notes?: string | null;
+          rejection_reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
         }
       >;
       provider_services: TableDef<
@@ -351,6 +434,7 @@ export type Database = {
           default_location: string | null;
           latitude: number | null;
           longitude: number | null;
+          pro_application_status: string | null;
           created_at: string;
           updated_at: string;
         },
@@ -363,6 +447,7 @@ export type Database = {
           default_location?: string | null;
           latitude?: number | null;
           longitude?: number | null;
+          pro_application_status?: string | null;
           created_at?: string;
           updated_at?: string;
         },
@@ -375,6 +460,7 @@ export type Database = {
           default_location?: string | null;
           latitude?: number | null;
           longitude?: number | null;
+          pro_application_status?: string | null;
           created_at?: string;
           updated_at?: string;
         }

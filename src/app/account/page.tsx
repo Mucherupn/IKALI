@@ -79,7 +79,7 @@ export default function AccountPage() {
         .eq('id', session.user.id)
         .maybeSingle();
 
-      if (profile?.role !== 'customer') {
+      if (profile?.role !== 'customer' && profile?.role !== 'provider' && profile?.role !== 'admin') {
         setAccessState('forbidden');
         setLoading(false);
         return;

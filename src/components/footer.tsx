@@ -1,23 +1,13 @@
 import Link from 'next/link';
 
 const footerLinks = [
-  {
-    title: 'Explore',
-    links: [
-      { href: '/services', label: 'Services' },
-      { href: '/providers', label: 'Providers' },
-      { href: '/request', label: 'Request service' },
-      { href: '/trust', label: 'Trust' }
-    ]
-  },
-  {
-    title: 'Company',
-    links: [
-      { href: '/about', label: 'About' },
-      { href: '/become-a-pro', label: 'Join as Pro' },
-      { href: '/contact', label: 'Contact' }
-    ]
-  }
+  { href: '/services', label: 'Services' },
+  { href: '/providers', label: 'Providers' },
+  { href: '/trust', label: 'Trust' },
+  { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
+  { href: '/request', label: 'Request service' },
+  { href: '/become-a-pro', label: 'Become a Pro' }
 ];
 
 export function Footer() {
@@ -34,58 +24,35 @@ export function Footer() {
               <span className="text-xl font-black tracking-[-0.06em] text-[var(--red)]">Kali</span>
             </Link>
 
-            <p className="mt-5 max-w-md text-sm leading-7 text-white/55">
-              Trusted local services, built for Kenya.
-            </p>
+            <p className="mt-5 max-w-md text-sm leading-7 text-white/55">Trusted local services, built for Kenya.</p>
 
             <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap">
               <Link
-  href="/app"
-  className="group inline-flex min-h-11 items-center justify-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white/80 transition hover:border-white hover:bg-white"
->
-  <span className="transition group-hover:!text-black">
-    App Store
-  </span>
-</Link>
+                href="/app"
+                className="group inline-flex min-h-11 items-center justify-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white/80 transition hover:border-white hover:bg-white"
+              >
+                <span className="transition group-hover:!text-black">App Store</span>
+              </Link>
 
-<Link
-  href="/app"
-  className="group inline-flex min-h-11 items-center justify-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white/80 transition hover:border-white hover:bg-white"
->
-  <span className="transition group-hover:!text-black">
-    Google Play
-  </span>
-</Link>
+              <Link
+                href="/app"
+                className="group inline-flex min-h-11 items-center justify-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white/80 transition hover:border-white hover:bg-white"
+              >
+                <span className="transition group-hover:!text-black">Google Play</span>
+              </Link>
             </div>
           </div>
 
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {footerLinks.map((group) => (
-              <div key={group.title}>
-                <p className="text-sm font-semibold text-white">{group.title}</p>
-                <div className="mt-4 space-y-3 text-sm text-white/55">
-                  {group.links.map((link) => (
-                    <Link key={link.href} href={link.href} className="block transition hover:text-white">
-                      {link.label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ))}
-
-            <div>
-              <p className="text-sm font-semibold text-white">Get started</p>
-              <div className="mt-4 space-y-3 text-sm text-white/55">
-                <Link href="/request" className="block transition hover:text-white">
-                  Find help
+          <div>
+            <p className="text-sm font-semibold text-white">Explore</p>
+            <div className="mt-4 grid gap-x-8 gap-y-3 text-sm text-white/55 sm:grid-cols-2">
+              {footerLinks.map((link) => (
+                <Link key={link.href} href={link.href} className="block transition hover:text-white">
+                  {link.label}
                 </Link>
-                <Link href="/providers" className="block transition hover:text-white">
-                  Browse providers
-                </Link>
-                <Link href="/services" className="block transition hover:text-white">
-                  Browse services
-                </Link>
-              </div>
+              ))}
+              <span className="text-white/50">App Store</span>
+              <span className="text-white/50">Google Play</span>
             </div>
           </div>
         </div>
